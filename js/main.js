@@ -127,11 +127,19 @@ class App {
                 debouncedSearch(e.target.value);
             });
 
-            // Keyboard Shortcut: CMD/Ctrl + K
+            // Keyboard Shortcuts
             document.addEventListener('keydown', (e) => {
+                // CMD/Ctrl + K - Search
                 if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                     e.preventDefault();
                     searchInput.focus();
+                }
+
+                // CMD/Ctrl + N - New Contact
+                if ((e.metaKey || e.ctrlKey) && e.key === 'n' && this.currentView === 'contacts') {
+                    e.preventDefault();
+                    const form = new ContactForm();
+                    form.open('create');
                 }
             });
         }
@@ -484,6 +492,22 @@ class App {
                     <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="2" opacity="0.2"/>
                 </svg>
                 <p class="text-secondary">Noch keine ${entityName}</p>
+            </div>
+        `;
+    }
+
+    /**
+     * No Results State (für Suche)
+     */
+    renderNoResultsState() {
+        return `
+            <div class="loading-screen">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                    <circle cx="28" cy="28" r="18" stroke="currentColor" stroke-width="3" opacity="0.2"/>
+                    <path d="M42 42L54 54" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.2"/>
+                </svg>
+                <p class="text-secondary">Keine Kontakte gefunden</p>
+                <p class="text-tertiary text-sm">Versuchen Sie andere Suchbegriffe</p>
             </div>
         `;
     }

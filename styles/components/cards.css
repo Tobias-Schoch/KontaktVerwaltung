@@ -55,6 +55,11 @@
 .contact-card {
     cursor: pointer;
     position: relative;
+    user-select: none;
+}
+
+.contact-card:active {
+    transform: scale(0.98);
 }
 
 .contact-card[data-selected="true"] {
