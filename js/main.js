@@ -99,9 +99,13 @@ class App {
      * Session wiederherstellen
      */
     async restoreSession() {
+        console.log('🔄 restoreSession() wird aufgerufen...');
         try {
             const data = await fileSystemService.restoreSession();
+            console.log('📦 restoreSession() hat zurückgegeben:', data ? `${data.contacts?.length || 0} Kontakte` : 'null/undefined');
+
             if (data) {
+                console.log('✅ Daten gefunden, lade in AppState...');
                 appState.loadState(data);
 
                 // Settings anwenden (Akzentfarbe)
@@ -112,11 +116,12 @@ class App {
 
                 showToast('Daten geladen', 'success', 2000);
                 this.updateCounters();
+                console.log('✅ Daten erfolgreich geladen!');
             } else {
-                console.log('Keine vorherige Session gefunden');
+                console.log('❌ Keine vorherige Session gefunden (data ist null/undefined)');
             }
         } catch (error) {
-            console.error('Fehler beim Wiederherstellen der Session:', error);
+            console.error('❌ Fehler beim Wiederherstellen der Session:', error);
             showToast('Fehler beim Laden der Daten', 'error');
         }
     }

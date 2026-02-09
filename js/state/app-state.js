@@ -235,6 +235,7 @@ class AppState {
      * Dirty State (ungespeicherte Änderungen)
      */
     markDirty() {
+        console.log('🔄 markDirty() aufgerufen - starte Auto-Save');
         this.state.ui.isDirty = true;
         this.emit('state:dirty', true);
 
@@ -253,17 +254,23 @@ class AppState {
      * Automatisches Speichern in IndexedDB
      */
     async autoSaveToIndexedDB() {
+        console.log('📝 autoSaveToIndexedDB() aufgerufen');
+
         if (!fileSystemServiceInstance) {
-            console.warn('FileSystemService noch nicht initialisiert');
+            console.error('❌ FileSystemService noch nicht initialisiert!');
             return;
         }
 
+        console.log('✓ FileSystemService ist verfügbar, starte Speicherung...');
+
         try {
             const data = this.exportState();
+            console.log('📦 Daten exportiert, Anzahl Kontakte:', data.contacts?.length || 0);
+
             await fileSystemServiceInstance.saveWorkingCopy(data);
-            console.log('✓ Auto-Save in IndexedDB erfolgreich');
+            console.log('✅ Auto-Save in IndexedDB erfolgreich abgeschlossen!');
         } catch (error) {
-            console.error('Fehler beim Auto-Save:', error);
+            console.error('❌ Fehler beim Auto-Save:', error);
         }
     }
 
