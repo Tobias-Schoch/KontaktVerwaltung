@@ -450,6 +450,17 @@ class App {
                 const data = await fileSystemService.uploadFile();
                 if (data) {
                     appState.loadState(data);
+
+                    // Settings anwenden (Theme und Akzentfarbe)
+                    const settings = appState.getSettings();
+                    if (settings.theme) {
+                        document.documentElement.setAttribute('data-theme', settings.theme);
+                        localStorage.setItem('theme', settings.theme);
+                    }
+                    if (settings.accentColor) {
+                        this.applyAccentColor(settings.accentColor);
+                    }
+
                     showToast('Daten importiert', 'success');
                     this.renderView('contacts');
                     this.updateCounters();
@@ -458,6 +469,17 @@ class App {
                 const data = await fileSystemService.openFile();
                 if (data) {
                     appState.loadState(data);
+
+                    // Settings anwenden (Theme und Akzentfarbe)
+                    const settings = appState.getSettings();
+                    if (settings.theme) {
+                        document.documentElement.setAttribute('data-theme', settings.theme);
+                        localStorage.setItem('theme', settings.theme);
+                    }
+                    if (settings.accentColor) {
+                        this.applyAccentColor(settings.accentColor);
+                    }
+
                     showToast('Datei geöffnet', 'success');
                     this.renderView('contacts');
                     this.updateCounters();

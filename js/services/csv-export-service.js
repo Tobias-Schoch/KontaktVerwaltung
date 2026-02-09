@@ -4,6 +4,22 @@
 
 class CSVExportService {
     /**
+     * Anrede für einen Kontakt generieren (inkl. Nachname)
+     */
+    getSalutation(contact) {
+        const gender = contact.fields?.gender || '';
+        const lastName = contact.fields?.lastName || '';
+
+        if (gender === 'male') {
+            return `Sehr geehrter Herr ${lastName}`.trim();
+        } else if (gender === 'female') {
+            return `Sehr geehrte Frau ${lastName}`.trim();
+        } else {
+            return `Sehr geehrte/r ${lastName}`.trim();
+        }
+    }
+
+    /**
      * Kontakte als CSV für Serienbriefe exportieren
      */
     exportForMailMerge(contacts) {
@@ -24,18 +40,14 @@ class CSVExportService {
 
         // CSV Rows
         const rows = contacts.map(contact => {
-            const salutation = contact.getSalutation();
-            const lastName = contact.fields.lastName || '';
-            const fullSalutation = `${salutation} ${lastName}`.trim();
-
             return [
-                this.escapeCsvField(fullSalutation),
-                this.escapeCsvField(contact.fields.firstName || ''),
-                this.escapeCsvField(contact.fields.lastName || ''),
-                this.escapeCsvField(contact.fields.address?.street || ''),
-                this.escapeCsvField(contact.fields.address?.zip || ''),
-                this.escapeCsvField(contact.fields.address?.city || ''),
-                this.escapeCsvField(contact.fields.address?.country || '')
+                this.escapeCsvField(this.getSalutation(contact)),
+                this.escapeCsvField(contact.fields?.firstName || ''),
+                this.escapeCsvField(contact.fields?.lastName || ''),
+                this.escapeCsvField(contact.fields?.address?.street || ''),
+                this.escapeCsvField(contact.fields?.address?.zip || ''),
+                this.escapeCsvField(contact.fields?.address?.city || ''),
+                this.escapeCsvField(contact.fields?.address?.country || '')
             ];
         });
 
@@ -68,18 +80,14 @@ class CSVExportService {
 
         // CSV Rows
         const rows = contacts.map(contact => {
-            const salutation = contact.getSalutation();
-            const lastName = contact.fields.lastName || '';
-            const fullSalutation = `${salutation} ${lastName}`.trim();
-
             return [
-                this.escapeCsvField(fullSalutation),
-                this.escapeCsvField(contact.fields.firstName || ''),
-                this.escapeCsvField(contact.fields.lastName || ''),
-                this.escapeCsvField(contact.fields.address?.street || ''),
-                this.escapeCsvField(contact.fields.address?.zip || ''),
-                this.escapeCsvField(contact.fields.address?.city || ''),
-                this.escapeCsvField(contact.fields.address?.country || '')
+                this.escapeCsvField(this.getSalutation(contact)),
+                this.escapeCsvField(contact.fields?.firstName || ''),
+                this.escapeCsvField(contact.fields?.lastName || ''),
+                this.escapeCsvField(contact.fields?.address?.street || ''),
+                this.escapeCsvField(contact.fields?.address?.zip || ''),
+                this.escapeCsvField(contact.fields?.address?.city || ''),
+                this.escapeCsvField(contact.fields?.address?.country || '')
             ];
         });
 
