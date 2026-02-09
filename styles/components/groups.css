@@ -15,7 +15,7 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    height: 100%;
+    height: calc(100vh - var(--topbar-height));
     overflow: hidden;
 }
 
