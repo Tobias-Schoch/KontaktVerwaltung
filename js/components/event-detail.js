@@ -4,6 +4,7 @@
 
 import eventService from '../services/event-service.js';
 import groupService from '../services/group-service.js';
+import csvExportService from '../services/csv-export-service.js';
 import appState from '../state/app-state.js';
 import { showToast, copyToClipboard, formatDate } from '../utils/helpers.js';
 import { EventForm } from './event-form.js';
@@ -123,6 +124,13 @@ export class EventDetail {
                             </svg>
                             Alle per E-Mail kontaktieren
                         </button>
+                        <button class="btn btn--secondary w-full mt-2" id="downloadMailMergeBtn">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M10 3V15M10 15L15 10M10 15L5 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M3 17H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Serienbrief Herunterladen
+                        </button>
                     </div>
                 ` : ''}
 
@@ -180,6 +188,10 @@ export class EventDetail {
             }
         });
 
+        this.panelElement.querySelector('#downloadMailMergeBtn')?.addEventListener('click', () => {
+            this.handleDownloadMailMerge();
+        });
+
         this.panelElement.querySelectorAll('[data-copy-email]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -212,6 +224,22 @@ export class EventDetail {
             } catch (error) {
                 showToast('Fehler beim Löschen', 'error');
             }
+        }
+    }
+
+    handleDownloadMailMerge() {
+        try {
+            const attendees = eventService.getAttendees(this.eventId);
+            if (attendees.length === 0) {
+                showToast('Keine Teilnehmer bei diesem Event', 'warning');
+                return;
+            }
+
+            csvExportService.exportForMailMerge(attendees);
+            showToast(`CSV für ${attendees.length} Teilnehmer exportiert`, 'success');
+        } catch (error) {
+            console.error('Fehler beim Exportieren:', error);
+            showToast(error.message || 'Fehler beim Exportieren', 'error');
         }
     }
 

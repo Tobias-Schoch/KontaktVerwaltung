@@ -3,6 +3,7 @@
  */
 
 import groupService from '../services/group-service.js';
+import csvExportService from '../services/csv-export-service.js';
 import appState from '../state/app-state.js';
 import { showToast, copyToClipboard } from '../utils/helpers.js';
 import { GroupForm } from './group-form.js';
@@ -130,6 +131,13 @@ export class GroupDetail {
                             </svg>
                             Alle per E-Mail kontaktieren (BCC)
                         </button>
+                        <button class="btn btn--secondary w-full mt-2" id="downloadMailMergeBtn">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M10 3V15M10 15L15 10M10 15L5 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M3 17H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Serienbrief Herunterladen
+                        </button>
                     </div>
                 ` : ''}
 
@@ -221,6 +229,10 @@ export class GroupDetail {
         const emailAllBtn = this.panelElement.querySelector('#emailAllBtn');
         emailAllBtn?.addEventListener('click', () => this.handleEmailAll());
 
+        // Download Mail Merge
+        const downloadMailMergeBtn = this.panelElement.querySelector('#downloadMailMergeBtn');
+        downloadMailMergeBtn?.addEventListener('click', () => this.handleDownloadMailMerge());
+
         // Copy Email buttons
         this.panelElement.querySelectorAll('[data-copy-email]').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -301,6 +313,25 @@ export class GroupDetail {
         } catch (error) {
             console.error('Fehler beim Öffnen des Email-Clients:', error);
             showToast(error.message || 'Fehler beim Öffnen des Email-Clients', 'error');
+        }
+    }
+
+    /**
+     * Download Mail Merge Handler
+     */
+    handleDownloadMailMerge() {
+        try {
+            const contacts = groupService.getContacts(this.groupId);
+            if (contacts.length === 0) {
+                showToast('Keine Kontakte in dieser Gruppe', 'warning');
+                return;
+            }
+
+            csvExportService.exportForMailMerge(contacts);
+            showToast(`CSV für ${contacts.length} Kontakte exportiert`, 'success');
+        } catch (error) {
+            console.error('Fehler beim Exportieren:', error);
+            showToast(error.message || 'Fehler beim Exportieren', 'error');
         }
     }
 

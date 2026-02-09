@@ -100,6 +100,13 @@ class App {
             const data = await fileSystemService.restoreSession();
             if (data) {
                 appState.loadState(data);
+
+                // Settings anwenden (Akzentfarbe)
+                const settings = appState.getSettings();
+                if (settings.accentColor) {
+                    this.applyAccentColor(settings.accentColor);
+                }
+
                 showToast('Daten geladen', 'success', 2000);
                 this.updateCounters();
             } else {
@@ -341,6 +348,17 @@ class App {
     loadDemoData() {
         const data = generateDemoData();
         appState.loadState(data);
+
+        // Settings anwenden (Theme und Akzentfarbe)
+        const settings = data.settings;
+        if (settings.theme) {
+            document.documentElement.setAttribute('data-theme', settings.theme);
+            localStorage.setItem('theme', settings.theme);
+        }
+        if (settings.accentColor) {
+            this.applyAccentColor(settings.accentColor);
+        }
+
         showToast('Demo-Daten geladen (6 Kontakte)', 'success');
         this.renderView('contacts');
         this.updateCounters();

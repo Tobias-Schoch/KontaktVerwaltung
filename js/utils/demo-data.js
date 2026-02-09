@@ -259,8 +259,8 @@ export function generateDemoData() {
         customFields,
         settings: {
             theme: 'light',
-            accentColor: 'sky',
-            defaultEmail: '',
+            accentColor: 'violet',
+            defaultEmail: 'demo@example.com',
             animationsEnabled: true
         },
         history: []
