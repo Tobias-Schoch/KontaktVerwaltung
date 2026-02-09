@@ -72,7 +72,7 @@ export class ContactForm {
                 </button>
             </div>
 
-            <form class="modal__body" id="contactForm">
+            <form class="modal__body" id="contactForm" autocomplete="off">
                 <div class="input-group">
                     <label class="input-label input-label--required">Anrede</label>
                     <select class="input select-fancy" name="gender" required>
@@ -146,21 +146,15 @@ export class ContactForm {
 
                 <div class="input-group">
                     <label class="input-label">Adresse</label>
-                    <input
-                        type="text"
-                        class="input"
-                        name="street"
-                        value="${contact?.fields.address?.street || ''}"
-                        placeholder="Musterstraße 1"
-                        style="margin-bottom: 0.5rem;"
-                    />
-                    <div style="display: grid; grid-template-columns: 100px 1fr 1fr; gap: 0.5rem;">
+                    <div style="display: grid; grid-template-columns: 100px 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                         <input
                             type="text"
                             class="input"
                             name="zip"
                             value="${contact?.fields.address?.zip || ''}"
                             placeholder="12345"
+                            id="zipInput"
+                            autocomplete="off"
                         />
                         <input
                             type="text"
@@ -168,6 +162,8 @@ export class ContactForm {
                             name="city"
                             value="${contact?.fields.address?.city || ''}"
                             placeholder="Stadt"
+                            id="cityInput"
+                            autocomplete="off"
                         />
                         <input
                             type="text"
@@ -175,8 +171,25 @@ export class ContactForm {
                             name="country"
                             value="${contact?.fields.address?.country || ''}"
                             placeholder="Deutschland"
+                            id="countryInput"
+                            autocomplete="off"
                         />
                     </div>
+                    <div style="position: relative;">
+                        <input
+                            type="text"
+                            class="input"
+                            name="street"
+                            value="${contact?.fields.address?.street || ''}"
+                            placeholder="Straße eingeben..."
+                            id="streetInput"
+                            autocomplete="off"
+                        />
+                        <div id="streetDropdown" class="street-autocomplete-dropdown" style="display: none;"></div>
+                    </div>
+                    <small class="input-helper" id="streetHelper" style="display: none; color: var(--color-text-tertiary);">
+                        Tippe um Straßen zu suchen...
+                    </small>
                 </div>
 
                 <div class="input-group">
@@ -249,9 +262,11 @@ export class ContactForm {
         });
 
         // PLZ Auto-Complete
-        const zipInput = form.querySelector('input[name="zip"]');
-        const cityInput = form.querySelector('input[name="city"]');
-        const countryInput = form.querySelector('input[name="country"]');
+        const zipInput = form.querySelector('#zipInput');
+        const cityInput = form.querySelector('#cityInput');
+        const countryInput = form.querySelector('#countryInput');
+        const streetInput = form.querySelector('#streetInput');
+        const streetHelper = form.querySelector('#streetHelper');
 
         if (zipInput && cityInput) {
             zipInput.addEventListener('input', async (e) => {
@@ -260,6 +275,49 @@ export class ContactForm {
                 // Nur bei 5-stelliger PLZ suchen (Deutschland)
                 if (zip.length === 5 && /^\d{5}$/.test(zip)) {
                     await this.lookupCity(zip, cityInput, countryInput);
+                    // Helper-Text anzeigen
+                    if (streetHelper) {
+                        streetHelper.style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        // Straßen-Autocomplete
+        if (streetInput && zipInput) {
+            const streetDropdown = this.modalElement.querySelector('#streetDropdown');
+            let searchTimeout;
+
+            streetInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                const zip = zipInput.value.trim();
+
+                // Dropdown verstecken wenn zu wenig Text
+                if (query.length < 2) {
+                    if (streetDropdown) streetDropdown.style.display = 'none';
+                    return;
+                }
+
+                // Nur suchen wenn PLZ vorhanden und mindestens 2 Zeichen eingegeben
+                if (query.length >= 2 && zip.length === 5) {
+                    searchTimeout = setTimeout(() => {
+                        this.searchStreets(query, zip, cityInput.value);
+                    }, 300); // Debounce 300ms
+                }
+            });
+
+            // Dropdown schließen bei Click außerhalb
+            document.addEventListener('click', (e) => {
+                if (streetDropdown && !streetInput.contains(e.target) && !streetDropdown.contains(e.target)) {
+                    streetDropdown.style.display = 'none';
+                }
+            });
+
+            // Focus: Dropdown zeigen wenn bereits Ergebnisse vorhanden
+            streetInput.addEventListener('focus', () => {
+                if (streetDropdown && streetDropdown.children.length > 0 && streetInput.value.length >= 2) {
+                    streetDropdown.style.display = 'block';
                 }
             });
         }
@@ -318,6 +376,79 @@ export class ContactForm {
         } catch (error) {
             console.error('Fehler beim Speichern:', error);
             showToast(error.message || 'Fehler beim Speichern', 'error');
+        }
+    }
+
+    /**
+     * Straßen suchen basierend auf PLZ und Stadt
+     */
+    async searchStreets(query, zip, city) {
+        try {
+            const dropdown = this.modalElement.querySelector('#streetDropdown');
+            const streetInput = this.modalElement.querySelector('#streetInput');
+            if (!dropdown || !streetInput) return;
+
+            // Loading-Anzeige
+            dropdown.innerHTML = '<div class="street-autocomplete-item" style="opacity: 0.5;">Suche Straßen...</div>';
+            dropdown.style.display = 'block';
+
+            // Photon API (OpenStreetMap-basiert, kostenlos)
+            // Suche nach Straßen in der angegebenen Stadt/PLZ
+            const searchQuery = `${query}, ${city || zip}, Deutschland`;
+            const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=15`;
+
+            const response = await fetch(url);
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Dropdown leeren
+                dropdown.innerHTML = '';
+
+                // Straßennamen extrahieren und deduplizieren
+                const streets = new Set();
+
+                data.features.forEach(feature => {
+                    const props = feature.properties;
+
+                    // Straßenname (verschiedene Formate möglich)
+                    let streetName = props.name || props.street;
+
+                    // Filter: Nur Straßen (highways) und im richtigen PLZ-Bereich
+                    if (streetName &&
+                        (props.type === 'street' || props.type === 'road' || props.osm_key === 'highway') &&
+                        (!props.postcode || props.postcode === zip || props.city === city)) {
+                        streets.add(streetName);
+                    }
+                });
+
+                // Wenn keine Straßen gefunden
+                if (streets.size === 0) {
+                    dropdown.innerHTML = '<div class="street-autocomplete-item" style="opacity: 0.5;">Keine Straßen gefunden</div>';
+                    console.log(`ℹ️ Keine Straßen gefunden für "${query}" in ${city || zip}`);
+                    return;
+                }
+
+                // Dropdown-Items erstellen
+                streets.forEach(street => {
+                    const item = document.createElement('div');
+                    item.className = 'street-autocomplete-item';
+                    item.textContent = street;
+                    item.addEventListener('click', () => {
+                        streetInput.value = street;
+                        dropdown.style.display = 'none';
+                    });
+                    dropdown.appendChild(item);
+                });
+
+                console.log(`✓ ${streets.size} Straßen gefunden für "${query}" in ${city || zip}`);
+            }
+        } catch (error) {
+            console.error('Fehler bei Straßen-Suche:', error);
+            const dropdown = this.modalElement.querySelector('#streetDropdown');
+            if (dropdown) {
+                dropdown.innerHTML = '<div class="street-autocomplete-item" style="opacity: 0.5;">Fehler bei der Suche</div>';
+            }
         }
     }
 
