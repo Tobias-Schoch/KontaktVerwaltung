@@ -420,21 +420,12 @@ class App {
                                 Demo-Daten laden
                             </button>
                         ` : ''}
-                        ${contacts.length > 0 ? `
-                            <button class="btn btn--secondary" id="exportCSVBtn">
-                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                    <path d="M10 3V15M10 15L15 10M10 15L5 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M3 17H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                                CSV Serienbrief
-                            </button>
-                        ` : ''}
-                        <button class="btn btn--secondary" id="importBtn">
+                        <button class="btn btn--secondary" id="importContactsBtn">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                                 <path d="M10 15V3M10 3L5 8M10 3L15 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 <path d="M3 17H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
-                            ${contacts.length === 0 ? 'Importieren' : 'Öffnen'}
+                            Kontakte importieren
                         </button>
                         <button class="btn btn--primary" id="addContactBtn">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -474,7 +465,11 @@ class App {
             form.open('create');
         });
 
-        document.getElementById('importBtn')?.addEventListener('click', async () => {
+        document.getElementById('importContactsBtn')?.addEventListener('click', () => {
+            this.importContacts();
+        });
+
+        document.getElementById('importButton')?.addEventListener('click', async () => {
             if (fileSystemService.getStorageMode() === 'fallback') {
                 const data = await fileSystemService.uploadFile();
                 if (data) {
