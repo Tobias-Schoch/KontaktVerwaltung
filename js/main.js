@@ -29,8 +29,6 @@ class App {
      * App Initialisierung
      */
     async init() {
-        console.log('🚀 KontaktHub wird gestartet...');
-
         // FileSystemService im AppState registrieren
         appState.setFileSystemService(fileSystemService);
 
@@ -51,8 +49,6 @@ class App {
 
         // Before Unload Warning (für Fallback-Mode)
         fileSystemService.setupBeforeUnloadWarning();
-
-        console.log('✓ App initialisiert');
     }
 
     /**
@@ -99,13 +95,10 @@ class App {
      * Session wiederherstellen
      */
     async restoreSession() {
-        console.log('🔄 restoreSession() wird aufgerufen...');
         try {
             const data = await fileSystemService.restoreSession();
-            console.log('📦 restoreSession() hat zurückgegeben:', data ? `${data.contacts?.length || 0} Kontakte` : 'null/undefined');
 
             if (data) {
-                console.log('✅ Daten gefunden, lade in AppState...');
                 appState.loadState(data);
 
                 // Settings anwenden (Akzentfarbe)
@@ -116,12 +109,8 @@ class App {
 
                 showToast('Daten geladen', 'success', 2000);
                 this.updateCounters();
-                console.log('✅ Daten erfolgreich geladen!');
-            } else {
-                console.log('❌ Keine vorherige Session gefunden (data ist null/undefined)');
             }
         } catch (error) {
-            console.error('❌ Fehler beim Wiederherstellen der Session:', error);
             showToast('Fehler beim Laden der Daten', 'error');
         }
     }
@@ -145,6 +134,30 @@ class App {
             indicator.classList.remove('storage-indicator--fallback');
             indicator.title = 'Auto-Save aktiv (IndexedDB - erstelle Backups mit Speichern-Button)';
         }
+    }
+
+    startClock() {
+        const updateTime = () => {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}:${seconds}`;
+
+            const timeDisplay = document.getElementById('timeDisplay');
+            if (timeDisplay) {
+                const timeText = timeDisplay.querySelector('.time-display__text');
+                if (timeText) {
+                    timeText.textContent = timeString;
+                }
+            }
+        };
+
+        // Sofort aktualisieren
+        updateTime();
+
+        // Jede Sekunde aktualisieren
+        setInterval(updateTime, 1000);
     }
 
     /**
@@ -452,7 +465,6 @@ class App {
                 csvExportService.exportForMailMerge(contacts);
                 showToast('CSV für Serienbrief exportiert', 'success');
             } catch (error) {
-                console.error('Export-Fehler:', error);
                 showToast(error.message || 'Fehler beim Exportieren', 'error');
             }
         });
