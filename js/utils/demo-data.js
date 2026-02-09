@@ -196,12 +196,25 @@ export function generateDemoData() {
         {
             id: generateUUID(),
             name: 'Networking Event 2026',
-            description: 'Jährliches Networking-Treffen',
-            eventDate: '2026-03-15T18:00:00Z',
+            description: 'Jährliches Networking-Treffen mit Kunden und Partnern',
+            eventDate: '2026-03-15',
             location: 'München, Event Center',
             attendees: {
-                groupIds: [],
+                groupIds: [kundenGroupId, partnerGroupId],
                 contactIds: []
+            },
+            createdAt: now,
+            updatedAt: now
+        },
+        {
+            id: generateUUID(),
+            name: 'Teammeeting',
+            description: 'Quartalsbesprechung',
+            eventDate: '2026-02-20',
+            location: 'Zoom',
+            attendees: {
+                groupIds: [],
+                contactIds: [contacts[2].id, contacts[5].id] // Hans, Sophie
             },
             createdAt: now,
             updatedAt: now

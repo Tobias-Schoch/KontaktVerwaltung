@@ -108,6 +108,83 @@
     text-overflow: ellipsis;
 }
 
+/* Sidebar Sections */
+.groups-view__sidebar-section {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.groups-view__sidebar-section:last-child {
+    border-bottom: none;
+}
+
+.sidebar-section-title {
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--space-3) var(--space-6) var(--space-2);
+}
+
+/* Sidebar Group Item */
+.events-groups-list {
+    padding: var(--space-2);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.sidebar-group-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    cursor: grab;
+    transition: all var(--duration-fast) var(--ease-out);
+    user-select: none;
+    margin-bottom: var(--space-2);
+}
+
+.sidebar-group-item:hover {
+    background-color: var(--color-surface-hover);
+}
+
+.sidebar-group-item:active {
+    cursor: grabbing;
+}
+
+.sidebar-group-item.draggable--dragging {
+    opacity: 0.5;
+}
+
+.sidebar-group-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.sidebar-group-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sidebar-group-name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-group-count {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .groups-view__sidebar {
@@ -172,6 +249,15 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    cursor: grab;
+}
+
+.group-card:active {
+    cursor: grabbing;
+}
+
+.group-card.draggable--dragging {
+    opacity: 0.5;
 }
 
 .group-card--drop-target {

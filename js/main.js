@@ -6,12 +6,15 @@ import appState from './state/app-state.js';
 import fileSystemService from './services/file-system-service.js';
 import contactService from './services/contact-service.js';
 import groupService from './services/group-service.js';
-import { showToast, debounce } from './utils/helpers.js';
+import eventService from './services/event-service.js';
+import { showToast, debounce, formatDate } from './utils/helpers.js';
 import { generateDemoData } from './utils/demo-data.js';
 import { ContactForm } from './components/contact-form.js';
 import { ContactDetail } from './components/contact-detail.js';
 import { GroupForm } from './components/group-form.js';
 import { GroupDetail } from './components/group-detail.js';
+import { EventForm } from './components/event-form.js';
+import { EventDetail } from './components/event-detail.js';
 import dragDropManager from './utils/drag-drop-manager.js';
 
 class App {
@@ -184,6 +187,12 @@ class App {
         });
         appState.subscribe('events:added', () => this.updateCounters());
         appState.subscribe('events:deleted', () => this.updateCounters());
+        appState.subscribe('events:changed', () => {
+            this.updateCounters();
+            if (this.currentView === 'events') {
+                this.renderView('events');
+            }
+        });
     }
 
     /**
@@ -521,7 +530,7 @@ class App {
 
             // Click: Open Detail
             card.addEventListener('click', (e) => {
-                // Ignore if clicking action buttons
+                // Ignore if clicking action buttons or during drag
                 if (e.target.closest('button')) return;
 
                 if (groupId) {
@@ -530,12 +539,17 @@ class App {
                 }
             });
 
-            // Make Droppable für Drag & Drop
+            // Make Draggable (für Events)
+            if (groupId) {
+                dragDropManager.makeGroupDraggable(card, groupId);
+            }
+
+            // Make Droppable (für Contacts)
             if (groupId) {
                 dragDropManager.makeDroppable(card, groupId);
             }
 
-            card.style.cursor = 'pointer';
+            card.style.cursor = 'grab';
         });
     }
 
@@ -647,12 +661,173 @@ class App {
      * Events View
      */
     renderEventsView(container) {
+        const events = eventService.list();
+        const contacts = contactService.list();
+        const groups = groupService.list();
+
         container.innerHTML = `
-            <div class="view-container p-6">
-                <h1 class="text-3xl font-semibold mb-6">Events</h1>
-                ${this.renderEmptyState('Events')}
+            <div class="groups-view-container">
+                <!-- Sidebar mit Contacts & Groups -->
+                <div class="groups-view__sidebar">
+                    <div class="groups-view__sidebar-header">
+                        <h3 class="text-base font-semibold">Teilnehmer</h3>
+                    </div>
+
+                    <!-- Kontakte -->
+                    <div class="groups-view__sidebar-section">
+                        <h4 class="sidebar-section-title">Kontakte (${contacts.length})</h4>
+                        <div class="groups-view__sidebar-search">
+                            <input
+                                type="search"
+                                class="input input--sm"
+                                placeholder="Suche..."
+                                id="eventsContactSearch"
+                            />
+                        </div>
+                        <div class="groups-view__contacts" id="eventsContactsList">
+                            ${this.renderContactListItems(contacts)}
+                        </div>
+                    </div>
+
+                    <!-- Gruppen -->
+                    <div class="groups-view__sidebar-section">
+                        <h4 class="sidebar-section-title">Gruppen (${groups.length})</h4>
+                        <div class="events-groups-list">
+                            ${groups.map(group => `
+                                <div class="sidebar-group-item" data-group-id="${group.id}" draggable="true">
+                                    <div class="sidebar-group-dot" style="background-color: var(--group-color-${group.color})"></div>
+                                    <div class="sidebar-group-info">
+                                        <div class="sidebar-group-name">${this.escapeHtml(group.name)}</div>
+                                        <div class="sidebar-group-count">${group.contactIds.length} Mitglieder</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Events Grid -->
+                <div class="groups-view__main">
+                    <div class="view-header flex items-center justify-between mb-6">
+                        <div>
+                            <h1 class="text-3xl font-semibold">Events</h1>
+                            <p class="text-secondary mt-2">${events.length} ${events.length === 1 ? 'Event' : 'Events'}</p>
+                        </div>
+                        <button class="btn btn--primary" id="addEventBtn">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Event erstellen
+                        </button>
+                    </div>
+
+                    <div class="contacts-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+                        ${events.length === 0 ? this.renderEmptyState('Events') : this.renderEventCards(events)}
+                    </div>
+                </div>
             </div>
         `;
+
+        // Add Event Button
+        document.getElementById('addEventBtn')?.addEventListener('click', () => new EventForm().open('create'));
+
+        // Contact Search in Sidebar
+        const contactSearch = document.getElementById('eventsContactSearch');
+        if (contactSearch) {
+            contactSearch.addEventListener('input', debounce((e) => {
+                const query = e.target.value.toLowerCase();
+                const contactsList = document.getElementById('eventsContactsList');
+                const filtered = query ? contacts.filter(c => c.matchesSearch(query)) : contacts;
+                contactsList.innerHTML = this.renderContactListItems(filtered);
+                this.attachEventsContactListeners();
+            }, 300));
+        }
+
+        // Contact List Items Drag Events
+        this.attachEventsContactListeners();
+
+        // Group Items Drag Events
+        container.querySelectorAll('.sidebar-group-item').forEach(item => {
+            const groupId = item.dataset.groupId;
+            if (groupId) {
+                dragDropManager.makeGroupDraggable(item, groupId);
+            }
+        });
+
+        // Event Card Events
+        container.querySelectorAll('.event-card').forEach(card => {
+            const eventId = card.dataset.eventId;
+
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;
+                if (eventId) new EventDetail(eventId).open();
+            });
+
+            // Make Droppable für Drag & Drop
+            if (eventId) {
+                dragDropManager.makeEventDroppable(card, eventId);
+            }
+
+            card.style.cursor = 'pointer';
+        });
+    }
+
+    /**
+     * Attach Contact List Listeners für Events View
+     */
+    attachEventsContactListeners() {
+        document.querySelectorAll('#eventsContactsList .contact-list-item').forEach(item => {
+            const contactId = item.dataset.contactId;
+            if (contactId) {
+                dragDropManager.makeDraggable(item, contactId);
+            }
+        });
+    }
+
+    /**
+     * Event Cards rendern
+     */
+    renderEventCards(events) {
+        return events.map(event => {
+            const attendeeCount = eventService.getAttendees(event.id).length;
+            const isPast = event.isPast();
+            const isToday = event.isToday();
+
+            return `
+                <div class="card event-card ${isPast ? 'event-card--past' : ''}" data-event-id="${event.id}">
+                    <div class="event-card__date">
+                        <div class="event-card__date-day">${new Date(event.eventDate).getDate()}</div>
+                        <div class="event-card__date-month">${new Date(event.eventDate).toLocaleString('de-DE', { month: 'short' })}</div>
+                    </div>
+
+                    <div class="event-card__content">
+                        <div class="event-card__header">
+                            <h3 class="event-card__name">${this.escapeHtml(event.name)}</h3>
+                            ${isToday ? '<span class="event-card__badge event-card__badge--today">Heute</span>' : ''}
+                            ${isPast ? '<span class="event-card__badge event-card__badge--past">Vorbei</span>' : ''}
+                        </div>
+
+                        ${event.location ? `
+                            <div class="event-card__location">
+                                <svg width="14" height="14" fill="none"><path d="M7 1C5.34 1 4 2.34 4 4C4 6.5 7 10 7 10C7 10 10 6.5 10 4C10 2.34 8.66 1 7 1ZM7 5C6.45 5 6 4.55 6 4C6 3.45 6.45 3 7 3C7.55 3 8 3.45 8 4C8 4.55 7.55 5 7 5Z" fill="currentColor"/></svg>
+                                ${this.escapeHtml(event.location)}
+                            </div>
+                        ` : ''}
+
+                        ${event.description ? `
+                            <div class="event-card__description">${this.escapeHtml(event.description)}</div>
+                        ` : ''}
+
+                        <div class="event-card__footer">
+                            <div class="event-card__attendees">
+                                <svg width="16" height="16" fill="none"><path d="M8 8C9.66 8 11 6.66 11 5C11 3.34 9.66 2 8 2C6.34 2 5 3.34 5 5C5 6.66 6.34 8 8 8ZM8 9.5C5.67 9.5 1 10.67 1 13V14H15V13C15 10.67 10.33 9.5 8 9.5Z" fill="currentColor"/></svg>
+                                ${attendeeCount} ${attendeeCount === 1 ? 'Teilnehmer' : 'Teilnehmer'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     /**
