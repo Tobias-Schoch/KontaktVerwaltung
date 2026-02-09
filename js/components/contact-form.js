@@ -12,6 +12,7 @@ export class ContactForm {
         this.mode = 'create'; // 'create' | 'edit'
         this.contactId = null;
         this.modalElement = null;
+        this.lastSelectedStreet = null; // Zuletzt ausgewählte Straße
     }
 
     /**
@@ -293,16 +294,32 @@ export class ContactForm {
                 const query = e.target.value.trim();
                 const zip = zipInput.value.trim();
 
+                // Parse Eingabe: "Hauptstraße 123" -> nur "Hauptstraße" für Suche
+                const match = query.match(/^(.+?)\s+(\d+[a-z]?)?$/i);
+                const streetName = match ? match[1].trim() : query;
+                const houseNumber = match && match[2] ? match[2].trim() : '';
+
+                // Wenn gerade eine Hausnummer zur ausgewählten Straße hinzugefügt wird, kein Dropdown
+                if (this.lastSelectedStreet && query.startsWith(this.lastSelectedStreet)) {
+                    if (streetDropdown) streetDropdown.style.display = 'none';
+                    return;
+                }
+
+                // Reset lastSelectedStreet wenn User die Straße ändert
+                if (this.lastSelectedStreet && !query.startsWith(this.lastSelectedStreet)) {
+                    this.lastSelectedStreet = null;
+                }
+
                 // Dropdown verstecken wenn zu wenig Text
-                if (query.length < 5) {
+                if (streetName.length < 5) {
                     if (streetDropdown) streetDropdown.style.display = 'none';
                     return;
                 }
 
                 // Nur suchen wenn PLZ vorhanden und mindestens 5 Zeichen eingegeben
-                if (query.length >= 5 && zip.length === 5) {
+                if (streetName.length >= 5 && zip.length === 5) {
                     searchTimeout = setTimeout(() => {
-                        this.searchStreets(query, zip, cityInput.value);
+                        this.searchStreets(streetName, zip, cityInput.value, houseNumber);
                     }, 300); // Debounce 300ms
                 }
             });
@@ -382,7 +399,7 @@ export class ContactForm {
     /**
      * Straßen suchen basierend auf PLZ und Stadt
      */
-    async searchStreets(query, zip, city) {
+    async searchStreets(query, zip, city, houseNumber = '') {
         try {
             const dropdown = this.modalElement.querySelector('#streetDropdown');
             const streetInput = this.modalElement.querySelector('#streetInput');
@@ -461,8 +478,13 @@ export class ContactForm {
                     });
 
                     item.addEventListener('click', () => {
-                        streetInput.value = street;
+                        // Straße als zuletzt ausgewählt merken
+                        this.lastSelectedStreet = street;
+                        // Hausnummer wieder anhängen, falls vorhanden
+                        streetInput.value = houseNumber ? `${street} ${houseNumber}` : street;
                         dropdown.style.display = 'none';
+                        // Fokus auf Input setzen, damit User direkt Hausnummer eingeben kann
+                        streetInput.focus();
                     });
                     dropdown.appendChild(item);
                 });
