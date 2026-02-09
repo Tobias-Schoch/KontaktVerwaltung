@@ -84,7 +84,9 @@
 /* View Container - für normale Views */
 .view-container {
     flex: 1;
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Loading Screen */

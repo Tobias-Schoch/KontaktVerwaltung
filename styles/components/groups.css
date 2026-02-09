@@ -4,7 +4,6 @@
 .groups-view-container {
     display: flex;
     flex: 1;
-    height: 100%;
     overflow: hidden;
 }
 
@@ -15,6 +14,8 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
 .groups-view__sidebar-header {
@@ -23,11 +24,13 @@
     justify-content: space-between;
     padding: var(--space-4) var(--space-6);
     border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
 }
 
 .groups-view__sidebar-search {
     padding: var(--space-4) var(--space-6);
     border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
 }
 
 .input--sm {
@@ -38,13 +41,16 @@
 .groups-view__contacts {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--space-2);
+    min-height: 0;
 }
 
 .groups-view__main {
     flex: 1;
     overflow-y: auto;
     padding: var(--space-6);
+    min-height: 0;
 }
 
 /* Contact List Item (Sidebar) */
@@ -112,11 +118,17 @@
 .groups-view__sidebar-section {
     border-bottom: 1px solid var(--color-border);
     padding-bottom: var(--space-4);
-    margin-bottom: var(--space-4);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 50%;
+    overflow: hidden;
 }
 
 .groups-view__sidebar-section:last-child {
     border-bottom: none;
+    flex: 1;
+    max-height: none;
 }
 
 .sidebar-section-title {
@@ -126,13 +138,16 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: var(--space-3) var(--space-6) var(--space-2);
+    flex-shrink: 0;
 }
 
 /* Sidebar Group Item */
 .events-groups-list {
     padding: var(--space-2);
-    max-height: 300px;
     overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
 }
 
 .sidebar-group-item {
