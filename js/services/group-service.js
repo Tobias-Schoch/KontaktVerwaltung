@@ -178,15 +178,19 @@ class GroupService {
     /**
      * Mailto-Link für alle Gruppenmitglieder (BCC)
      */
-    getMailtoLink(groupId, subject = '') {
+    getMailtoLink(groupId, defaultRecipient = '', subject = '') {
         const emails = this.getEmailAddresses(groupId);
         if (emails.length === 0) {
             throw new Error('Keine Email-Adressen in dieser Gruppe');
         }
 
-        const bcc = emails.join(',');
-        const subjectParam = subject ? `?subject=${encodeURIComponent(subject)}` : '';
-        return `mailto:${subjectParam}${subject ? '&' : '?'}bcc=${encodeURIComponent(bcc)}`;
+        const group = this.get(groupId);
+        const defaultSubject = subject || `Nachricht an ${group.name}`;
+        const bcc = encodeURIComponent(emails.join(','));
+        const to = defaultRecipient ? encodeURIComponent(defaultRecipient) : '';
+        const subjectEncoded = encodeURIComponent(defaultSubject);
+
+        return `mailto:${to}?subject=${subjectEncoded}&bcc=${bcc}`;
     }
 
     /**

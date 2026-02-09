@@ -35,18 +35,22 @@
     margin: 0 var(--space-8);
 }
 
-/* Logo */
+/* Logo - BIGGER & FANCY */
 .logo {
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    font-weight: var(--font-semibold);
-    font-size: var(--text-lg);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 1.75rem;
+    letter-spacing: -0.03em;
     color: var(--color-primary);
 }
 
 .logo__icon {
     color: var(--color-primary);
+    width: 40px;
+    height: 40px;
 }
 
 /* Main Container */

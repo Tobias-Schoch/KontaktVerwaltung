@@ -27,8 +27,12 @@ export class EventDetail {
 
     close() {
         if (this.panelElement) {
+            this.destroy(); // Event Listeners aufräumen
             this.panelElement.style.animation = 'slideOutRight 250ms ease-out forwards';
-            setTimeout(() => this.panelElement?.remove(), 250);
+            setTimeout(() => {
+                this.panelElement?.remove();
+                this.panelElement = null;
+            }, 250);
         }
     }
 
@@ -185,6 +189,17 @@ export class EventDetail {
 
         this.escapeHandler = (e) => e.key === 'Escape' && this.close();
         document.addEventListener('keydown', this.escapeHandler);
+
+        // Click außerhalb des Panels
+        this.clickOutsideHandler = (e) => {
+            if (this.panelElement && !this.panelElement.contains(e.target)) {
+                this.close();
+            }
+        };
+        // Delay um zu verhindern, dass der Click der das Panel öffnet es sofort wieder schließt
+        setTimeout(() => {
+            document.addEventListener('click', this.clickOutsideHandler);
+        }, 100);
     }
 
     async handleDelete() {
@@ -210,6 +225,9 @@ export class EventDetail {
     destroy() {
         if (this.escapeHandler) {
             document.removeEventListener('keydown', this.escapeHandler);
+        }
+        if (this.clickOutsideHandler) {
+            document.removeEventListener('click', this.clickOutsideHandler);
         }
     }
 }

@@ -32,9 +32,11 @@
 }
 
 .card__title {
+    font-family: 'Bricolage Grotesque', sans-serif;
     font-size: var(--text-lg);
-    font-weight: var(--font-semibold);
+    font-weight: 600;
     color: var(--color-text-primary);
+    letter-spacing: -0.02em;
 }
 
 .card__body {
@@ -87,14 +89,18 @@
 }
 
 .contact-card__name {
+    font-family: 'Bricolage Grotesque', sans-serif;
     font-size: var(--text-base);
-    font-weight: var(--font-semibold);
+    font-weight: 600;
     color: var(--color-text-primary);
     margin-bottom: var(--space-1);
+    letter-spacing: -0.02em;
 }
 
 .contact-card__email {
+    font-family: 'Bricolage Grotesque', sans-serif;
     font-size: var(--text-sm);
+    font-weight: 400;
     color: var(--color-text-secondary);
     margin-bottom: var(--space-2);
 }

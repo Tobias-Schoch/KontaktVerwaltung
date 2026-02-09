@@ -16,6 +16,7 @@ export function generateDemoData() {
             fields: {
                 firstName: 'Max',
                 lastName: 'Mustermann',
+                gender: 'male',
                 email: 'max.mustermann@example.com',
                 phone: '+49 123 4567890',
                 mobile: '+49 170 1234567',
@@ -39,6 +40,7 @@ export function generateDemoData() {
             fields: {
                 firstName: 'Erika',
                 lastName: 'Musterfrau',
+                gender: 'female',
                 email: 'erika.musterfrau@example.com',
                 phone: '+49 89 123456',
                 mobile: '+49 171 9876543',
@@ -62,6 +64,7 @@ export function generateDemoData() {
             fields: {
                 firstName: 'Hans',
                 lastName: 'Schmidt',
+                gender: 'male',
                 email: 'h.schmidt@tech-corp.de',
                 phone: '+49 30 987654',
                 mobile: '',
@@ -85,6 +88,7 @@ export function generateDemoData() {
             fields: {
                 firstName: 'Anna',
                 lastName: 'Weber',
+                gender: 'female',
                 email: 'anna.weber@startup.io',
                 phone: '',
                 mobile: '+49 160 5555555',
@@ -108,6 +112,7 @@ export function generateDemoData() {
             fields: {
                 firstName: 'Thomas',
                 lastName: 'Müller',
+                gender: 'male',
                 email: 'thomas.mueller@email.de',
                 phone: '+49 221 111222',
                 mobile: '+49 175 1231234',
@@ -131,6 +136,7 @@ export function generateDemoData() {
             fields: {
                 firstName: 'Sophie',
                 lastName: 'Schneider',
+                gender: 'female',
                 email: 'sophie@marketing-pro.de',
                 phone: '+49 711 888999',
                 mobile: '',

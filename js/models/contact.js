@@ -12,6 +12,7 @@ export class Contact {
         this.fields = {
             firstName: data.fields?.firstName || '',
             lastName: data.fields?.lastName || '',
+            gender: data.fields?.gender || '', // male, female, diverse
             email: data.fields?.email || '',
             phone: data.fields?.phone || '',
             mobile: data.fields?.mobile || '',
@@ -35,7 +36,7 @@ export class Contact {
      */
     extractCustomFields(fields = {}) {
         const standardFields = [
-            'firstName', 'lastName', 'email', 'phone', 'mobile',
+            'firstName', 'lastName', 'gender', 'email', 'phone', 'mobile',
             'company', 'address', 'notes'
         ];
 
@@ -77,6 +78,20 @@ export class Contact {
      */
     getDisplayName() {
         return this.getFullName();
+    }
+
+    /**
+     * Anrede für Serienbriefe generieren
+     */
+    getSalutation() {
+        const gender = this.fields.gender;
+        if (gender === 'male') {
+            return 'Sehr geehrter Herr';
+        } else if (gender === 'female') {
+            return 'Sehr geehrte Frau';
+        } else {
+            return 'Sehr geehrte/r'; // Neutral für diverse
+        }
     }
 
     /**

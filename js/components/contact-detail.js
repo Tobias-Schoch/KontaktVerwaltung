@@ -34,6 +34,7 @@ export class ContactDetail {
      */
     close() {
         if (this.panelElement) {
+            this.destroy(); // Event Listeners aufräumen
             this.panelElement.style.animation = 'slideOutRight 250ms ease-out forwards';
             setTimeout(() => {
                 this.panelElement?.remove();
@@ -249,6 +250,17 @@ export class ContactDetail {
             }
         };
         document.addEventListener('keydown', this.escapeHandler);
+
+        // Click außerhalb des Panels
+        this.clickOutsideHandler = (e) => {
+            if (this.panelElement && !this.panelElement.contains(e.target)) {
+                this.close();
+            }
+        };
+        // Delay um zu verhindern, dass der Click der das Panel öffnet es sofort wieder schließt
+        setTimeout(() => {
+            document.addEventListener('click', this.clickOutsideHandler);
+        }, 100);
     }
 
     /**
@@ -311,6 +323,9 @@ export class ContactDetail {
     destroy() {
         if (this.escapeHandler) {
             document.removeEventListener('keydown', this.escapeHandler);
+        }
+        if (this.clickOutsideHandler) {
+            document.removeEventListener('click', this.clickOutsideHandler);
         }
     }
 }

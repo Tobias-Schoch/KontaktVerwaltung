@@ -7,6 +7,7 @@ import fileSystemService from './services/file-system-service.js';
 import contactService from './services/contact-service.js';
 import groupService from './services/group-service.js';
 import eventService from './services/event-service.js';
+import csvExportService from './services/csv-export-service.js';
 import { showToast, debounce, formatDate } from './utils/helpers.js';
 import { generateDemoData } from './utils/demo-data.js';
 import { ContactForm } from './components/contact-form.js';
@@ -340,6 +341,15 @@ class App {
                                 Demo-Daten laden
                             </button>
                         ` : ''}
+                        ${contacts.length > 0 ? `
+                            <button class="btn btn--secondary" id="exportCSVBtn">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M10 3V15M10 15L15 10M10 15L5 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M3 17H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                CSV Serienbrief
+                            </button>
+                        ` : ''}
                         <button class="btn btn--secondary" id="importBtn">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                                 <path d="M10 15V3M10 3L5 8M10 3L15 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -369,6 +379,16 @@ class App {
         // Event Listeners
         document.getElementById('loadDemoBtn')?.addEventListener('click', () => {
             this.loadDemoData();
+        });
+
+        document.getElementById('exportCSVBtn')?.addEventListener('click', () => {
+            try {
+                csvExportService.exportForMailMerge(contacts);
+                showToast('CSV für Serienbrief exportiert', 'success');
+            } catch (error) {
+                console.error('Export-Fehler:', error);
+                showToast(error.message || 'Fehler beim Exportieren', 'error');
+            }
         });
 
         document.getElementById('addContactBtn')?.addEventListener('click', () => {
@@ -852,6 +872,23 @@ class App {
                     </div>
                 </div>
 
+                <div class="card mb-6">
+                    <h3 class="text-lg font-semibold mb-4">E-Mail</h3>
+                    <div class="input-group">
+                        <label class="input-label">Ihre E-Mail-Adresse</label>
+                        <input
+                            type="email"
+                            class="input"
+                            id="defaultEmailInput"
+                            placeholder="ihre.email@example.com"
+                            value="${settings.defaultEmail || ''}"
+                        />
+                        <small class="input-helper">
+                            Diese E-Mail-Adresse wird als Empfänger verwendet, wenn Sie Gruppen oder Events per E-Mail kontaktieren (BCC).
+                        </small>
+                    </div>
+                </div>
+
                 <div class="card">
                     <h3 class="text-lg font-semibold mb-4">Speicherung</h3>
                     <div class="mb-4">
@@ -878,6 +915,24 @@ class App {
             localStorage.setItem('theme', theme);
             appState.updateSettings({ theme });
         });
+
+        // Default Email Input
+        const emailInput = document.getElementById('defaultEmailInput');
+        if (emailInput) {
+            emailInput.addEventListener('blur', (e) => {
+                const email = e.target.value.trim();
+                appState.updateSettings({ defaultEmail: email });
+                showToast('E-Mail-Adresse gespeichert', 'success', 2000);
+            });
+
+            // Save on Enter key
+            emailInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    emailInput.blur();
+                }
+            });
+        }
     }
 
     /**

@@ -223,6 +223,7 @@ class AppState {
 
     updateSettings(updates) {
         this.state.settings = { ...this.state.settings, ...updates };
+        this.markDirty(); // Settings-Änderungen speichern
         this.emit('settings:updated', this.state.settings);
     }
 

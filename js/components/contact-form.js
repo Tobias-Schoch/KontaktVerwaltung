@@ -73,6 +73,16 @@ export class ContactForm {
             </div>
 
             <form class="modal__body" id="contactForm">
+                <div class="input-group">
+                    <label class="input-label input-label--required">Anrede</label>
+                    <select class="input select-fancy" name="gender" required>
+                        <option value="">Bitte wählen...</option>
+                        <option value="male" ${contact?.fields.gender === 'male' ? 'selected' : ''}>Herr</option>
+                        <option value="female" ${contact?.fields.gender === 'female' ? 'selected' : ''}>Frau</option>
+                        <option value="diverse" ${contact?.fields.gender === 'diverse' ? 'selected' : ''}>Divers</option>
+                    </select>
+                </div>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="input-group">
                         <label class="input-label input-label--required">Vorname</label>
@@ -132,17 +142,6 @@ export class ContactForm {
                             placeholder="+49 170 1234567"
                         />
                     </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">Firma</label>
-                    <input
-                        type="text"
-                        class="input"
-                        name="company"
-                        value="${contact?.fields.company || ''}"
-                        placeholder="Musterfirma GmbH"
-                    />
                 </div>
 
                 <div class="input-group">
@@ -268,10 +267,10 @@ export class ContactForm {
             fields: {
                 firstName: formData.get('firstName')?.trim() || '',
                 lastName: formData.get('lastName')?.trim() || '',
+                gender: formData.get('gender')?.trim() || '',
                 email: formData.get('email')?.trim() || '',
                 phone: formData.get('phone')?.trim() || '',
                 mobile: formData.get('mobile')?.trim() || '',
-                company: formData.get('company')?.trim() || '',
                 address: {
                     street: formData.get('street')?.trim() || '',
                     city: formData.get('city')?.trim() || '',
