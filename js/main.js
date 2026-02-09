@@ -29,7 +29,10 @@ class App {
      * App Initialisierung
      */
     async init() {
-        console.log('🚀 Adressverwaltung wird gestartet...');
+        console.log('🚀 KontaktHub wird gestartet...');
+
+        // FileSystemService im AppState registrieren
+        appState.setFileSystemService(fileSystemService);
 
         // Theme aus localStorage laden
         this.initTheme();
@@ -131,11 +134,11 @@ class App {
         if (mode === 'filesystem') {
             text.textContent = 'Auto-Save';
             indicator.classList.remove('storage-indicator--fallback');
-            indicator.title = 'File System Access API aktiv (Auto-Save)';
+            indicator.title = 'File System Access API aktiv (Auto-Save in Datei)';
         } else {
-            text.textContent = 'Manuell';
-            indicator.classList.add('storage-indicator--fallback');
-            indicator.title = 'Fallback-Mode aktiv (Manuelles Speichern erforderlich)';
+            text.textContent = 'Auto-Save';
+            indicator.classList.remove('storage-indicator--fallback');
+            indicator.title = 'Auto-Save aktiv (IndexedDB - erstelle Backups mit Speichern-Button)';
         }
     }
 
@@ -279,12 +282,21 @@ class App {
         const saveBtn = document.getElementById('saveButton');
         if (!saveBtn) return;
 
-        if (isDirty) {
-            saveBtn.style.color = 'var(--color-primary)';
-            saveBtn.title = 'Ungespeicherte Änderungen';
+        const mode = fileSystemService.getStorageMode();
+
+        if (mode === 'filesystem') {
+            // Chrome/Edge: Zeigt Dirty-State an
+            if (isDirty) {
+                saveBtn.style.color = 'var(--color-primary)';
+                saveBtn.title = 'Ungespeicherte Änderungen - Klicken zum Speichern';
+            } else {
+                saveBtn.style.color = '';
+                saveBtn.title = 'In Datei gespeichert';
+            }
         } else {
+            // Safari/Firefox: Auto-Save aktiv, Button für Backups
             saveBtn.style.color = '';
-            saveBtn.title = 'Speichern';
+            saveBtn.title = 'Backup erstellen (Auto-Save ist aktiv)';
         }
     }
 

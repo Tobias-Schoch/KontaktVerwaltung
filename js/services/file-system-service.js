@@ -9,11 +9,16 @@ class FileSystemService {
     constructor() {
         this.fileHandle = null;
         this.storageMode = this.detectStorageMode();
-        this.dbName = 'AdressVerwaltungDB';
+        this.dbName = 'KontaktHubDB';
         this.dbVersion = 1;
         this.db = null;
+        this.dbReady = false;
 
-        this.initIndexedDB();
+        // IndexedDB initialisieren und Promise speichern
+        this.dbInitPromise = this.initIndexedDB().then(() => {
+            this.dbReady = true;
+            console.log('✓ IndexedDB initialisiert');
+        });
     }
 
     /**
@@ -94,15 +99,27 @@ class FileSystemService {
      * Working Copy in IndexedDB speichern
      */
     async saveWorkingCopy(data) {
-        if (!this.db) return;
+        // Warte auf DB-Initialisierung
+        await this.dbInitPromise;
+
+        if (!this.db) {
+            console.error('IndexedDB nicht verfügbar');
+            return;
+        }
 
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['workingCopy'], 'readwrite');
             const store = transaction.objectStore('workingCopy');
             const request = store.put(data, 'current');
 
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                console.log('✓ Daten in IndexedDB gespeichert');
+                resolve();
+            };
+            request.onerror = () => {
+                console.error('✗ Fehler beim Speichern in IndexedDB:', request.error);
+                reject(request.error);
+            };
         });
     }
 
@@ -110,15 +127,31 @@ class FileSystemService {
      * Working Copy aus IndexedDB laden
      */
     async loadWorkingCopy() {
-        if (!this.db) return null;
+        // Warte auf DB-Initialisierung
+        await this.dbInitPromise;
+
+        if (!this.db) {
+            console.error('IndexedDB nicht verfügbar');
+            return null;
+        }
 
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['workingCopy'], 'readonly');
             const store = transaction.objectStore('workingCopy');
             const request = store.get('current');
 
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                if (request.result) {
+                    console.log('✓ Daten aus IndexedDB geladen');
+                } else {
+                    console.log('ℹ Keine Daten in IndexedDB gefunden');
+                }
+                resolve(request.result);
+            };
+            request.onerror = () => {
+                console.error('✗ Fehler beim Laden aus IndexedDB:', request.error);
+                reject(request.error);
+            };
         });
     }
 

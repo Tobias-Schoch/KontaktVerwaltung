@@ -3,6 +3,9 @@
  * Zentraler State für die gesamte Anwendung
  */
 
+// fileSystemService wird nach Initialisierung gesetzt
+let fileSystemServiceInstance = null;
+
 class AppState {
     constructor() {
         this.state = {
@@ -234,6 +237,34 @@ class AppState {
     markDirty() {
         this.state.ui.isDirty = true;
         this.emit('state:dirty', true);
+
+        // Auto-Save in IndexedDB nach jeder Änderung
+        this.autoSaveToIndexedDB();
+    }
+
+    /**
+     * FileSystemService Referenz setzen (wird von main.js aufgerufen)
+     */
+    setFileSystemService(service) {
+        fileSystemServiceInstance = service;
+    }
+
+    /**
+     * Automatisches Speichern in IndexedDB
+     */
+    async autoSaveToIndexedDB() {
+        if (!fileSystemServiceInstance) {
+            console.warn('FileSystemService noch nicht initialisiert');
+            return;
+        }
+
+        try {
+            const data = this.exportState();
+            await fileSystemServiceInstance.saveWorkingCopy(data);
+            console.log('✓ Auto-Save in IndexedDB erfolgreich');
+        } catch (error) {
+            console.error('Fehler beim Auto-Save:', error);
+        }
     }
 
     markClean() {
