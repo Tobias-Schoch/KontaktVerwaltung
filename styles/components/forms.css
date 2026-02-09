@@ -153,27 +153,42 @@
     margin-top: 4px;
     background-color: var(--color-bg);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     max-height: 300px;
     overflow-y: auto;
     z-index: 1000;
+    padding: var(--space-2);
 }
 
 .street-autocomplete-item {
-    padding: var(--space-3) var(--space-4);
-    cursor: pointer;
-    transition: background-color var(--duration-fast) var(--ease-out);
-    font-size: var(--text-sm);
-    color: var(--color-text-primary);
+    padding: var(--space-3) var(--space-4) !important;
+    margin: var(--space-1) 0 !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: all var(--duration-fast) var(--ease-out) !important;
+    font-size: var(--text-sm) !important;
+    font-weight: var(--font-medium) !important;
+    color: var(--color-text-primary) !important;
+    background-color: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 50px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
 }
 
 .street-autocomplete-item:hover {
-    background-color: var(--color-surface-hover);
+    background-color: var(--color-primary) !important;
+    color: white !important;
+    border-color: var(--color-primary) !important;
+    transform: translateX(4px) scale(1.02) !important;
+    box-shadow: var(--shadow-md) !important;
+    cursor: pointer !important;
 }
 
-.street-autocomplete-item:not(:last-child) {
-    border-bottom: 1px solid var(--color-border);
+.street-autocomplete-item:active {
+    transform: translateX(4px) scale(0.98) !important;
 }
 
 /* Color Picker */

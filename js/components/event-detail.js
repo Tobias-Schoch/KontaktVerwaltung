@@ -134,38 +134,44 @@ export class EventDetail {
                     </div>
                 ` : ''}
 
-                ${groups.length > 0 ? `
-                    <div class="contact-detail__section">
-                        <h4 class="contact-detail__section-title">Gruppen</h4>
-                        ${groups.map(group => `
-                            <div class="group-badge" style="border-left-color: var(--group-color-${group.color})">
-                                ${this.escapeHtml(group.name)} (${group.contactIds.length})
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-
-                ${individualContacts.length > 0 ? `
-                    <div class="contact-detail__section">
-                        <h4 class="contact-detail__section-title">Einzelne Teilnehmer</h4>
-                        <div class="group-detail__members">
-                            ${individualContacts.map(contact => {
-                                const fullName = `${contact.fields.firstName || ''} ${contact.fields.lastName || ''}`.trim();
-                                return `
-                                    <div class="group-detail__member">
-                                        <div class="group-detail__member-info">
-                                            <div class="group-detail__member-name">${this.escapeHtml(fullName)}</div>
-                                            ${contact.fields.email ? `<div class="group-detail__member-email">${this.escapeHtml(contact.fields.email)}</div>` : ''}
+                ${groups.length > 0 || individualContacts.length > 0 ? `
+                    <div class="event-detail__attendees-container">
+                        ${groups.length > 0 ? `
+                            <div class="event-detail__section-half">
+                                <h4 class="contact-detail__section-title">Gruppen</h4>
+                                <div class="event-detail__groups-list">
+                                    ${groups.map(group => `
+                                        <div class="group-badge" style="border-left-color: var(--group-color-${group.color})">
+                                            ${this.escapeHtml(group.name)} (${group.contactIds.length})
                                         </div>
-                                        ${contact.fields.email ? `
-                                            <button class="icon-button icon-button--sm" data-copy-email="${this.escapeHtml(contact.fields.email)}">
-                                                <svg width="16" height="16" fill="none"><path d="M5 5V2H13V10H10M1 6H9V14H1V6Z" stroke="currentColor" stroke-width="1.5"/></svg>
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${individualContacts.length > 0 ? `
+                            <div class="event-detail__section-half">
+                                <h4 class="contact-detail__section-title">Einzelne Teilnehmer</h4>
+                                <div class="event-detail__members-list">
+                                    ${individualContacts.map(contact => {
+                                        const fullName = `${contact.fields.firstName || ''} ${contact.fields.lastName || ''}`.trim();
+                                        return `
+                                            <div class="group-detail__member">
+                                                <div class="group-detail__member-info">
+                                                    <div class="group-detail__member-name">${this.escapeHtml(fullName)}</div>
+                                                    ${contact.fields.email ? `<div class="group-detail__member-email">${this.escapeHtml(contact.fields.email)}</div>` : ''}
+                                                </div>
+                                                ${contact.fields.email ? `
+                                                    <button class="icon-button icon-button--sm" data-copy-email="${this.escapeHtml(contact.fields.email)}">
+                                                        <svg width="16" height="16" fill="none"><path d="M5 5V2H13V10H10M1 6H9V14H1V6Z" stroke="currentColor" stroke-width="1.5"/></svg>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 ` : ''}
             </div>

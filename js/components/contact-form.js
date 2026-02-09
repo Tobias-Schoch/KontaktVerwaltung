@@ -294,13 +294,13 @@ export class ContactForm {
                 const zip = zipInput.value.trim();
 
                 // Dropdown verstecken wenn zu wenig Text
-                if (query.length < 2) {
+                if (query.length < 5) {
                     if (streetDropdown) streetDropdown.style.display = 'none';
                     return;
                 }
 
-                // Nur suchen wenn PLZ vorhanden und mindestens 2 Zeichen eingegeben
-                if (query.length >= 2 && zip.length === 5) {
+                // Nur suchen wenn PLZ vorhanden und mindestens 5 Zeichen eingegeben
+                if (query.length >= 5 && zip.length === 5) {
                     searchTimeout = setTimeout(() => {
                         this.searchStreets(query, zip, cityInput.value);
                     }, 300); // Debounce 300ms
@@ -433,7 +433,33 @@ export class ContactForm {
                 streets.forEach(street => {
                     const item = document.createElement('div');
                     item.className = 'street-autocomplete-item';
-                    item.textContent = street;
+
+                    // Icon hinzufügen
+                    const icon = document.createElement('span');
+                    icon.textContent = '📍';
+                    icon.style.opacity = '0.6';
+                    icon.style.userSelect = 'none';
+
+                    // Text hinzufügen
+                    const text = document.createElement('span');
+                    text.textContent = street;
+                    text.style.userSelect = 'none';
+
+                    item.appendChild(icon);
+                    item.appendChild(text);
+
+                    // Inline-Styles für Badge-Look
+                    item.style.cursor = 'pointer';
+                    item.style.userSelect = 'none';
+
+                    // Hover-Effekt
+                    item.addEventListener('mouseenter', () => {
+                        icon.style.opacity = '1';
+                    });
+                    item.addEventListener('mouseleave', () => {
+                        icon.style.opacity = '0.6';
+                    });
+
                     item.addEventListener('click', () => {
                         streetInput.value = street;
                         dropdown.style.display = 'none';
