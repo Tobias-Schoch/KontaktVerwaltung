@@ -5,10 +5,14 @@
 import appState from './state/app-state.js';
 import fileSystemService from './services/file-system-service.js';
 import contactService from './services/contact-service.js';
+import groupService from './services/group-service.js';
 import { showToast, debounce } from './utils/helpers.js';
 import { generateDemoData } from './utils/demo-data.js';
 import { ContactForm } from './components/contact-form.js';
 import { ContactDetail } from './components/contact-detail.js';
+import { GroupForm } from './components/group-form.js';
+import { GroupDetail } from './components/group-detail.js';
+import dragDropManager from './utils/drag-drop-manager.js';
 
 class App {
     constructor() {
@@ -116,6 +120,18 @@ class App {
             });
         });
 
+        // Sidebar schließen bei außerhalb-Click (Mobile)
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.getElementById('hamburgerBtn');
+
+            if (sidebar && sidebar.classList.contains('active')) {
+                if (!sidebar.contains(e.target) && !hamburger?.contains(e.target)) {
+                    sidebar.classList.remove('active');
+                }
+            }
+        });
+
         // Search
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
@@ -160,6 +176,12 @@ class App {
         });
         appState.subscribe('groups:added', () => this.updateCounters());
         appState.subscribe('groups:deleted', () => this.updateCounters());
+        appState.subscribe('groups:changed', () => {
+            this.updateCounters();
+            if (this.currentView === 'groups') {
+                this.renderView('groups');
+            }
+        });
         appState.subscribe('events:added', () => this.updateCounters());
         appState.subscribe('events:deleted', () => this.updateCounters());
     }
@@ -367,13 +389,23 @@ class App {
 
         // Contact Card Click Events
         container.querySelectorAll('.contact-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const contactId = card.dataset.contactId;
+            const contactId = card.dataset.contactId;
+
+            // Click: Open Detail
+            card.addEventListener('click', (e) => {
+                // Ignore if clicking action buttons
+                if (e.target.closest('button')) return;
+
                 if (contactId) {
                     const detail = new ContactDetail(contactId);
                     detail.open();
                 }
             });
+
+            // Make Draggable für Drag & Drop
+            if (contactId) {
+                dragDropManager.makeDraggable(card, contactId);
+            }
 
             // Hover Effect Enhancement
             card.style.cursor = 'pointer';
@@ -412,12 +444,203 @@ class App {
      * Groups View
      */
     renderGroupsView(container) {
+        const groups = groupService.list();
+        const contacts = contactService.list();
+
         container.innerHTML = `
-            <div class="view-container p-6">
-                <h1 class="text-3xl font-semibold mb-6">Gruppen</h1>
-                ${this.renderEmptyState('Gruppen')}
+            <div class="groups-view-container">
+                <!-- Contacts Sidebar -->
+                <div class="groups-view__sidebar">
+                    <div class="groups-view__sidebar-header">
+                        <h3 class="text-base font-semibold">Kontakte</h3>
+                        <span class="text-sm text-tertiary">${contacts.length}</span>
+                    </div>
+                    <div class="groups-view__sidebar-search">
+                        <input
+                            type="search"
+                            class="input input--sm"
+                            placeholder="Suche..."
+                            id="groupsContactSearch"
+                        />
+                    </div>
+                    <div class="groups-view__contacts" id="groupsContactsList">
+                        ${this.renderContactListItems(contacts)}
+                    </div>
+                </div>
+
+                <!-- Groups Grid -->
+                <div class="groups-view__main">
+                    <div class="view-header flex items-center justify-between mb-6">
+                        <div>
+                            <h1 class="text-3xl font-semibold">Gruppen</h1>
+                            <p class="text-secondary mt-2">${groups.length} ${groups.length === 1 ? 'Gruppe' : 'Gruppen'}</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button class="btn btn--primary" id="addGroupBtn">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                Gruppe erstellen
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="contacts-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+                        ${groups.length === 0 ? this.renderEmptyState('Gruppen') : this.renderGroupCards(groups)}
+                    </div>
+                </div>
             </div>
         `;
+
+        // Event Listeners
+        document.getElementById('addGroupBtn')?.addEventListener('click', () => {
+            const form = new GroupForm();
+            form.open('create');
+        });
+
+        // Contacts Search in Sidebar
+        const contactSearch = document.getElementById('groupsContactSearch');
+        if (contactSearch) {
+            contactSearch.addEventListener('input', debounce((e) => {
+                const query = e.target.value.toLowerCase();
+                const contactsList = document.getElementById('groupsContactsList');
+                const filtered = query
+                    ? contacts.filter(c => c.matchesSearch(query))
+                    : contacts;
+                contactsList.innerHTML = this.renderContactListItems(filtered);
+                this.attachContactListItemEvents();
+            }, 300));
+        }
+
+        // Contact List Items Drag Events
+        this.attachContactListItemEvents();
+
+        // Group Card Click Events
+        container.querySelectorAll('.group-card').forEach(card => {
+            const groupId = card.dataset.groupId;
+
+            // Click: Open Detail
+            card.addEventListener('click', (e) => {
+                // Ignore if clicking action buttons
+                if (e.target.closest('button')) return;
+
+                if (groupId) {
+                    const detail = new GroupDetail(groupId);
+                    detail.open();
+                }
+            });
+
+            // Make Droppable für Drag & Drop
+            if (groupId) {
+                dragDropManager.makeDroppable(card, groupId);
+            }
+
+            card.style.cursor = 'pointer';
+        });
+    }
+
+    /**
+     * Contact List Items rendern (für Groups Sidebar)
+     */
+    renderContactListItems(contacts) {
+        if (contacts.length === 0) {
+            return '<div class="text-center text-tertiary text-sm p-4">Keine Kontakte</div>';
+        }
+
+        return contacts.map(contact => {
+            const fullName = `${contact.fields.firstName || ''} ${contact.fields.lastName || ''}`.trim() || 'Unbenannt';
+            const initials = this.getInitials(contact.fields.firstName, contact.fields.lastName);
+
+            return `
+                <div class="contact-list-item" data-contact-id="${contact.id}" draggable="true">
+                    <div class="contact-list-item__avatar">${initials}</div>
+                    <div class="contact-list-item__info">
+                        <div class="contact-list-item__name">${this.escapeHtml(fullName)}</div>
+                        ${contact.fields.email ? `
+                            <div class="contact-list-item__email">${this.escapeHtml(contact.fields.email)}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Contact List Item Events (Drag)
+     */
+    attachContactListItemEvents() {
+        document.querySelectorAll('.contact-list-item').forEach(item => {
+            const contactId = item.dataset.contactId;
+            if (contactId) {
+                dragDropManager.makeDraggable(item, contactId);
+            }
+        });
+    }
+
+    /**
+     * Group Cards rendern
+     */
+    renderGroupCards(groups) {
+        return groups.map(group => {
+            const members = groupService.getContacts(group.id);
+            const memberCount = members.length;
+            const displayMembers = members.slice(0, 5);
+            const moreCount = Math.max(0, memberCount - 5);
+
+            return `
+                <div class="card group-card" data-group-id="${group.id}">
+                    <div class="group-card__color-bar" style="background-color: var(--group-color-${group.color})"></div>
+
+                    <div class="group-card__header">
+                        <div class="group-card__name">${this.escapeHtml(group.name)}</div>
+                        <div class="group-card__actions">
+                            <button class="group-card__action-btn" title="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M11 1L15 5L5 15H1V11L11 1Z" stroke="currentColor" stroke-width="1.5"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    ${group.description ? `
+                        <div class="group-card__description">${this.escapeHtml(group.description)}</div>
+                    ` : ''}
+
+                    <div class="group-card__members">
+                        <div class="group-card__members-header">
+                            <span class="group-card__members-count">
+                                ${memberCount} ${memberCount === 1 ? 'Mitglied' : 'Mitglieder'}
+                            </span>
+                        </div>
+
+                        ${memberCount === 0 ? `
+                            <div class="group-card__empty">
+                                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                    <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                Ziehen Sie Kontakte hierher
+                            </div>
+                        ` : `
+                            <div class="group-card__avatar-stack">
+                                ${displayMembers.map(member => {
+                                    const initials = this.getInitials(member.fields.firstName, member.fields.lastName);
+                                    return `<div class="group-card__avatar" title="${this.escapeHtml(member.fields.firstName)} ${this.escapeHtml(member.fields.lastName)}">${initials}</div>`;
+                                }).join('')}
+                                ${moreCount > 0 ? `
+                                    <div class="group-card__avatar group-card__avatar--more" title="${moreCount} weitere">+${moreCount}</div>
+                                ` : ''}
+                            </div>
+                        `}
+                    </div>
+
+                    <div class="group-card__drop-hint">
+                        <div class="group-card__drop-hint-text">
+                            Hier ablegen
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     /**

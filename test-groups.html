@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Groups View</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .test-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .topbar-mock {
+            height: 64px;
+            background: #fafafa;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+        }
+        .main-content-mock {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="topbar-mock">
+            <h2>Groups View Test</h2>
+        </div>
+        <div class="main-content-mock">
+            <div class="groups-view-container">
+                <!-- Contacts Sidebar -->
+                <div class="groups-view__sidebar">
+                    <div class="groups-view__sidebar-header">
+                        <h3 class="text-base font-semibold">Kontakte</h3>
+                        <span class="text-sm text-tertiary">6</span>
+                    </div>
+                    <div class="groups-view__sidebar-search">
+                        <input type="search" class="input input--sm" placeholder="Suche..." />
+                    </div>
+                    <div class="groups-view__contacts">
+                        <div class="contact-list-item">
+                            <div class="contact-list-item__avatar">MM</div>
+                            <div class="contact-list-item__info">
+                                <div class="contact-list-item__name">Max Mustermann</div>
+                                <div class="contact-list-item__email">max@example.com</div>
+                            </div>
+                        </div>
+                        <div class="contact-list-item">
+                            <div class="contact-list-item__avatar">EM</div>
+                            <div class="contact-list-item__info">
+                                <div class="contact-list-item__name">Erika Musterfrau</div>
+                                <div class="contact-list-item__email">erika@example.com</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Groups Grid -->
+                <div class="groups-view__main">
+                    <div class="view-header flex items-center justify-between mb-6">
+                        <h1 class="text-3xl font-semibold">Gruppen</h1>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+                        <div class="card group-card">
+                            <div class="group-card__color-bar" style="background-color: var(--group-color-blue)"></div>
+                            <div class="group-card__header">
+                                <div class="group-card__name">Familie</div>
+                            </div>
+                            <div class="group-card__members">
+                                <div class="group-card__members-header">
+                                    <span class="group-card__members-count">3 Mitglieder</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

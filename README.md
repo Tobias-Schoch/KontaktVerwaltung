@@ -35,7 +35,16 @@ Moderne lokale Kontaktverwaltung mit WOW-UI/UX - vollständig mit HTML/CSS/JavaS
 - Keyboard Shortcuts (Cmd+N, Cmd+K)
 - Smooth Animations
 
-**Phase 3-8:** In Planung (siehe PLAN.md)
+**Phase 3: Gruppenverwaltung & Drag & Drop** ✅ ABGESCHLOSSEN
+- Group CRUD Operations
+- Group Form & Detail View
+- Drag & Drop System (Contacts → Groups)
+- Member-Management
+- Email All (BCC)
+- 17 Farben, Color Picker
+- Bidirektionale Relationships
+
+**Phase 4-8:** In Planung (siehe PLAN.md)
 
 ## Installation & Start
 

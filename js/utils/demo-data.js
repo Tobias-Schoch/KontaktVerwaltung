@@ -150,35 +150,46 @@ export function generateDemoData() {
     ];
 
     // Demo Groups
+    const kundenGroupId = generateUUID();
+    const partnerGroupId = generateUUID();
+    const privatGroupId = generateUUID();
+
     const groups = [
         {
-            id: generateUUID(),
+            id: kundenGroupId,
             name: 'Kunden',
             description: 'Alle aktiven Kunden',
             color: 'blue',
-            contactIds: [],
+            contactIds: [contacts[0].id, contacts[1].id], // Max, Erika
             createdAt: now,
             updatedAt: now
         },
         {
-            id: generateUUID(),
+            id: partnerGroupId,
             name: 'Partner',
             description: 'Geschäftspartner und Kooperationen',
             color: 'green',
-            contactIds: [],
+            contactIds: [contacts[2].id, contacts[5].id], // Hans, Sophie
             createdAt: now,
             updatedAt: now
         },
         {
-            id: generateUUID(),
+            id: privatGroupId,
             name: 'Privat',
             description: 'Private Kontakte',
             color: 'purple',
-            contactIds: [],
+            contactIds: [contacts[4].id], // Thomas
             createdAt: now,
             updatedAt: now
         }
     ];
+
+    // Update contacts with group IDs
+    contacts[0].groupIds = [kundenGroupId];
+    contacts[1].groupIds = [kundenGroupId];
+    contacts[2].groupIds = [partnerGroupId];
+    contacts[4].groupIds = [privatGroupId];
+    contacts[5].groupIds = [partnerGroupId];
 
     // Demo Events
     const events = [
