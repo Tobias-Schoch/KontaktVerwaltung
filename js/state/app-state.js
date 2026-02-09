@@ -12,6 +12,7 @@ class AppState {
             customFields: [],
             settings: {
                 theme: 'light',
+                accentColor: 'sky',
                 defaultEmail: '',
                 animationsEnabled: true,
                 storageMode: null // 'filesystem' | 'fallback'

@@ -193,6 +193,14 @@ export class GroupDetail {
      * Event Listeners
      */
     attachEventListeners() {
+        // Alte globale Listener entfernen, falls vorhanden
+        if (this.escapeHandler) {
+            document.removeEventListener('keydown', this.escapeHandler);
+        }
+        if (this.clickOutsideHandler) {
+            document.removeEventListener('click', this.clickOutsideHandler);
+        }
+
         // Close
         const closeBtn = this.panelElement.querySelector('#closeDetailBtn');
         closeBtn?.addEventListener('click', () => this.close());

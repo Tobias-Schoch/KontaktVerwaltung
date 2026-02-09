@@ -259,6 +259,7 @@ export function generateDemoData() {
         customFields,
         settings: {
             theme: 'light',
+            accentColor: 'sky',
             defaultEmail: '',
             animationsEnabled: true
         },

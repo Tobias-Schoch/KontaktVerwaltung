@@ -58,7 +58,38 @@ class App {
     initTheme() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
-        appState.updateSettings({ theme: savedTheme });
+
+        // Akzentfarbe aus gespeicherten Settings laden
+        const settings = appState.getSettings();
+        if (settings.accentColor) {
+            this.applyAccentColor(settings.accentColor);
+        }
+    }
+
+    /**
+     * Akzentfarbe anwenden
+     */
+    applyAccentColor(colorName) {
+        const colorMap = {
+            'sky': '#0ea5e9',
+            'blue': '#3b82f6',
+            'indigo': '#6366f1',
+            'violet': '#8b5cf6',
+            'purple': '#a855f7',
+            'pink': '#ec4899',
+            'rose': '#f43f5e',
+            'red': '#ef4444',
+            'orange': '#f97316',
+            'amber': '#f59e0b',
+            'green': '#10b981',
+            'emerald': '#059669',
+            'teal': '#14b8a6',
+            'cyan': '#06b6d4'
+        };
+
+        const colorHex = colorMap[colorName] || colorMap['sky'];
+        document.documentElement.style.setProperty('--color-primary', colorHex);
+        document.documentElement.style.setProperty('--color-primary-hover', this.adjustColorBrightness(colorHex, -20));
     }
 
     /**
@@ -851,6 +882,45 @@ class App {
     }
 
     /**
+     * Color Options für Settings rendern
+     */
+    renderColorOptions(currentColor) {
+        const colors = [
+            { name: 'sky', label: 'Sky Blue', hex: '#0ea5e9' },
+            { name: 'blue', label: 'Blau', hex: '#3b82f6' },
+            { name: 'indigo', label: 'Indigo', hex: '#6366f1' },
+            { name: 'violet', label: 'Violett', hex: '#8b5cf6' },
+            { name: 'purple', label: 'Lila', hex: '#a855f7' },
+            { name: 'pink', label: 'Pink', hex: '#ec4899' },
+            { name: 'rose', label: 'Rose', hex: '#f43f5e' },
+            { name: 'red', label: 'Rot', hex: '#ef4444' },
+            { name: 'orange', label: 'Orange', hex: '#f97316' },
+            { name: 'amber', label: 'Bernstein', hex: '#f59e0b' },
+            { name: 'green', label: 'Grün', hex: '#10b981' },
+            { name: 'emerald', label: 'Smaragd', hex: '#059669' },
+            { name: 'teal', label: 'Türkis', hex: '#14b8a6' },
+            { name: 'cyan', label: 'Cyan', hex: '#06b6d4' }
+        ];
+
+        return colors.map(color => `
+            <button
+                class="color-option ${currentColor === color.name ? 'color-option--active' : ''}"
+                data-color="${color.name}"
+                data-hex="${color.hex}"
+                title="${color.label}"
+                style="--color: ${color.hex}"
+            >
+                <div class="color-option__circle"></div>
+                ${currentColor === color.name ? `
+                    <svg class="color-option__check" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M13 4L6 11L3 8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                ` : ''}
+            </button>
+        `).join('');
+    }
+
+    /**
      * Settings View
      */
     renderSettingsView(container) {
@@ -863,12 +933,20 @@ class App {
 
                 <div class="card mb-6">
                     <h3 class="text-lg font-semibold mb-4">Darstellung</h3>
-                    <div class="input-group">
+
+                    <div class="input-group mb-4">
                         <label class="input-label">Theme</label>
                         <select class="input select" id="themeSelect">
                             <option value="light" ${settings.theme === 'light' ? 'selected' : ''}>Hell</option>
                             <option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>Dunkel</option>
                         </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Akzentfarbe</label>
+                        <div class="color-picker" id="colorPicker">
+                            ${this.renderColorOptions(settings.accentColor || 'sky')}
+                        </div>
                     </div>
                 </div>
 
@@ -914,6 +992,27 @@ class App {
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
             appState.updateSettings({ theme });
+        });
+
+        // Color Picker
+        document.querySelectorAll('.color-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const colorName = btn.dataset.color;
+                const colorHex = btn.dataset.hex;
+
+                // Update CSS Custom Property
+                document.documentElement.style.setProperty('--color-primary', colorHex);
+                document.documentElement.style.setProperty('--color-primary-hover', this.adjustColorBrightness(colorHex, -20));
+
+                // Save to settings
+                appState.updateSettings({ accentColor: colorName });
+
+                // Update active state
+                document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('color-option--active'));
+                btn.classList.add('color-option--active');
+
+                showToast('Akzentfarbe geändert', 'success', 2000);
+            });
         });
 
         // Default Email Input
@@ -999,6 +1098,25 @@ class App {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Adjust Color Brightness (für Hover-Effekte)
+     */
+    adjustColorBrightness(hex, percent) {
+        // Hex zu RGB
+        const num = parseInt(hex.replace('#', ''), 16);
+        const r = (num >> 16) + percent;
+        const g = ((num >> 8) & 0x00FF) + percent;
+        const b = (num & 0x0000FF) + percent;
+
+        // Clamp values
+        const newR = Math.min(255, Math.max(0, r));
+        const newG = Math.min(255, Math.max(0, g));
+        const newB = Math.min(255, Math.max(0, b));
+
+        // RGB zu Hex
+        return '#' + ((newR << 16) | (newG << 8) | newB).toString(16).padStart(6, '0');
     }
 }
 
