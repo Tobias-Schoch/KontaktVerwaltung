@@ -248,6 +248,22 @@ export class ContactForm {
             this.handleSubmit(form);
         });
 
+        // PLZ Auto-Complete
+        const zipInput = form.querySelector('input[name="zip"]');
+        const cityInput = form.querySelector('input[name="city"]');
+        const countryInput = form.querySelector('input[name="country"]');
+
+        if (zipInput && cityInput) {
+            zipInput.addEventListener('input', async (e) => {
+                const zip = e.target.value.trim();
+
+                // Nur bei 5-stelliger PLZ suchen (Deutschland)
+                if (zip.length === 5 && /^\d{5}$/.test(zip)) {
+                    await this.lookupCity(zip, cityInput, countryInput);
+                }
+            });
+        }
+
         // ESC Key
         this.escapeHandler = (e) => {
             if (e.key === 'Escape') {
@@ -302,6 +318,55 @@ export class ContactForm {
         } catch (error) {
             console.error('Fehler beim Speichern:', error);
             showToast(error.message || 'Fehler beim Speichern', 'error');
+        }
+    }
+
+    /**
+     * PLZ zu Ort auflösen
+     */
+    async lookupCity(zip, cityInput, countryInput) {
+        try {
+            // Visual Feedback: Input markieren als "lädt"
+            cityInput.style.opacity = '0.5';
+            cityInput.placeholder = 'Suche...';
+
+            // API-Call zur Zippopotam.us API (kostenlos, kein API-Key nötig)
+            const response = await fetch(`https://api.zippopotam.us/de/${zip}`);
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.places && data.places.length > 0) {
+                    const place = data.places[0];
+
+                    // Stadt ausfüllen (nur wenn Feld leer ist)
+                    if (!cityInput.value) {
+                        cityInput.value = place['place name'];
+                    }
+
+                    // Land ausfüllen (nur wenn Feld leer ist)
+                    if (!countryInput.value && data.country) {
+                        // Land übersetzen (API gibt englische Namen zurück)
+                        const countryName = data.country === 'Germany' ? 'Deutschland' : data.country;
+                        countryInput.value = countryName;
+                    }
+
+                    // Visual Feedback: Erfolg
+                    cityInput.style.opacity = '1';
+                    cityInput.style.borderColor = 'var(--color-success)';
+                    setTimeout(() => {
+                        cityInput.style.borderColor = '';
+                    }, 1000);
+                }
+            } else {
+                // PLZ nicht gefunden
+                cityInput.style.opacity = '1';
+                cityInput.placeholder = 'Stadt';
+            }
+        } catch (error) {
+            console.error('Fehler bei PLZ-Lookup:', error);
+            cityInput.style.opacity = '1';
+            cityInput.placeholder = 'Stadt';
         }
     }
 
