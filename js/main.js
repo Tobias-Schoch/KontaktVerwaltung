@@ -1120,14 +1120,8 @@ class App {
                 }
 
                 if (contacts.length > 0) {
-                    // Kontakte importieren
-                    contacts.forEach(contact => {
-                        contactService.create(contact);
-                    });
-
-                    showToast(`${contacts.length} Kontakte importiert`, 'success');
-                    this.renderView('contacts');
-                    this.updateCounters();
+                    // Gruppen-Auswahl-Dialog anzeigen
+                    this.showGroupSelectionDialog(contacts);
                 } else {
                     showToast('Keine Kontakte gefunden', 'warning');
                 }
@@ -1139,25 +1133,176 @@ class App {
     }
 
     /**
+     * Gruppen-Auswahl-Dialog für CSV-Import
+     */
+    showGroupSelectionDialog(contacts) {
+        const groups = groupService.list();
+        const overlay = document.getElementById('modalOverlay');
+
+        const dialogHTML = `
+            <div class="modal modal--active">
+                <div class="modal__content" style="max-width: 500px;">
+                    <div class="modal__header">
+                        <h2 class="modal__title">Kontakte einer Gruppe zuweisen</h2>
+                        <button class="icon-button" id="closeGroupDialog">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal__body">
+                        <p class="text-sm text-secondary mb-4">${contacts.length} Kontakte importieren</p>
+
+                        <div class="input-group">
+                            <label class="input-label">Gruppe auswählen oder erstellen</label>
+                            <select class="input" id="groupSelect">
+                                <option value="">Keine Gruppe (nur importieren)</option>
+                                <option value="__new__">+ Neue Gruppe erstellen</option>
+                                ${groups.map(g => `<option value="${g.id}">${g.name} (${g.contactIds.length})</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="newGroupNameContainer" style="display: none;">
+                            <label class="input-label">Name der neuen Gruppe</label>
+                            <input type="text" class="input" id="newGroupName" placeholder="z.B. Importierte Kontakte">
+                        </div>
+                    </div>
+                    <div class="modal__footer">
+                        <button class="btn btn--secondary" id="cancelImportBtn">Abbrechen</button>
+                        <button class="btn btn--primary" id="confirmImportBtn">Importieren</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        overlay.innerHTML = dialogHTML;
+        overlay.classList.add('modal-overlay--active');
+
+        // Event Listeners
+        document.getElementById('closeGroupDialog').addEventListener('click', () => {
+            overlay.classList.remove('modal-overlay--active');
+            overlay.innerHTML = '';
+        });
+
+        document.getElementById('cancelImportBtn').addEventListener('click', () => {
+            overlay.classList.remove('modal-overlay--active');
+            overlay.innerHTML = '';
+        });
+
+        document.getElementById('groupSelect').addEventListener('change', (e) => {
+            const container = document.getElementById('newGroupNameContainer');
+            container.style.display = e.target.value === '__new__' ? 'block' : 'none';
+        });
+
+        document.getElementById('confirmImportBtn').addEventListener('click', () => {
+            this.performImport(contacts);
+        });
+    }
+
+    /**
+     * Import durchführen mit Duplikat-Prüfung
+     */
+    performImport(contacts) {
+        const groupSelect = document.getElementById('groupSelect').value;
+        const newGroupName = document.getElementById('newGroupName')?.value;
+
+        let groupId = null;
+
+        try {
+            // Neue Gruppe erstellen, falls gewünscht
+            if (groupSelect === '__new__') {
+                if (!newGroupName || !newGroupName.trim()) {
+                    showToast('Bitte Gruppennamen eingeben', 'error');
+                    return;
+                }
+                const newGroup = groupService.create({ name: newGroupName.trim() });
+                groupId = newGroup.id;
+            } else if (groupSelect) {
+                groupId = groupSelect;
+            }
+
+            // Kontakte importieren mit Duplikat-Prüfung
+            const imported = [];
+            const duplicates = [];
+
+            contacts.forEach(contactData => {
+                try {
+                    const contact = contactService.create(contactData);
+                    imported.push(contact.id);
+                } catch (error) {
+                    duplicates.push(error.message);
+                }
+            });
+
+            // Kontakte zur Gruppe hinzufügen
+            if (groupId && imported.length > 0) {
+                const group = groupService.get(groupId);
+                const updatedContactIds = [...new Set([...group.contactIds, ...imported])];
+                groupService.update(groupId, { contactIds: updatedContactIds });
+            }
+
+            // Dialog schließen
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('modal-overlay--active');
+            overlay.innerHTML = '';
+
+            // Ergebnis anzeigen
+            if (imported.length > 0) {
+                const groupName = groupId ? groupService.get(groupId).name : '';
+                const message = groupId
+                    ? `${imported.length} Kontakte in "${groupName}" importiert`
+                    : `${imported.length} Kontakte importiert`;
+                showToast(message, 'success');
+            }
+
+            if (duplicates.length > 0) {
+                showToast(`${duplicates.length} Duplikate übersprungen`, 'warning');
+            }
+
+            this.renderView('contacts');
+            this.updateCounters();
+
+        } catch (error) {
+            showToast('Fehler beim Importieren: ' + error.message, 'error');
+        }
+    }
+
+    /**
      * CSV parsen (unterstützt mehrere Formate)
      */
     parseCSV(text) {
         const lines = text.split('\n').filter(line => line.trim());
         if (lines.length < 2) return [];
 
-        const headers = lines[0].split('\t').map(h => h.trim());
+        // Trennzeichen erkennen und Zeilen splitten
+        const firstLine = lines[0];
+        let headers, allValues;
+
+        if (firstLine.includes('\t')) {
+            // Tab-getrennt
+            headers = firstLine.split('\t').map(h => h.trim());
+            allValues = lines.slice(1).map(line => line.split('\t').map(v => v.trim()));
+        } else {
+            // Mehrere Leerzeichen als Trenner
+            headers = firstLine.split(/\s{2,}/).map(h => h.trim());
+            allValues = lines.slice(1).map(line => line.split(/\s{2,}/).map(v => v.trim()));
+        }
+
         const contacts = [];
 
         // Prüfen, ob sowohl Anrede als auch Briefanrede vorhanden sind
         const hasBriefanrede = headers.includes('Briefanrede');
         const hasAnrede = headers.includes('Anrede');
 
-        for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split('\t');
+        for (let i = 0; i < allValues.length; i++) {
+            const values = allValues[i];
             const contact = {};
 
             headers.forEach((header, index) => {
                 const value = values[index]?.trim() || '';
+
+                // Leere Header überspringen
+                if (!header || !header.trim()) return;
 
                 // Mapping der Spalten (alle Formate)
                 // Format 1 & 2: Nachname/Vorname

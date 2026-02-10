@@ -18,6 +18,28 @@ class ContactService {
             throw new Error(Object.values(validation.errors).join(', '));
         }
 
+        // Duplikat-Prüfung: Vorname + Nachname
+        const contacts = appState.getContacts();
+        const nameExists = contacts.find(c =>
+            c.fields.firstName?.toLowerCase() === contact.fields.firstName?.toLowerCase() &&
+            c.fields.lastName?.toLowerCase() === contact.fields.lastName?.toLowerCase()
+        );
+
+        if (nameExists) {
+            throw new Error(`Kontakt "${contact.fields.firstName} ${contact.fields.lastName}" existiert bereits`);
+        }
+
+        // Duplikat-Prüfung: Email
+        if (contact.fields.email) {
+            const emailExists = contacts.find(c =>
+                c.fields.email?.toLowerCase() === contact.fields.email?.toLowerCase()
+            );
+
+            if (emailExists) {
+                throw new Error(`Email-Adresse "${contact.fields.email}" wird bereits verwendet`);
+            }
+        }
+
         appState.addContact(contact.toJSON());
         return contact;
     }
@@ -38,6 +60,29 @@ class ContactService {
 
         if (!validation.isValid) {
             throw new Error(Object.values(validation.errors).join(', '));
+        }
+
+        // Duplikat-Prüfung: Vorname + Nachname (außer sich selbst)
+        const nameExists = contacts.find(c =>
+            c.id !== contactId &&
+            c.fields.firstName?.toLowerCase() === updated.fields.firstName?.toLowerCase() &&
+            c.fields.lastName?.toLowerCase() === updated.fields.lastName?.toLowerCase()
+        );
+
+        if (nameExists) {
+            throw new Error(`Kontakt "${updated.fields.firstName} ${updated.fields.lastName}" existiert bereits`);
+        }
+
+        // Duplikat-Prüfung: Email (außer sich selbst)
+        if (updated.fields.email) {
+            const emailExists = contacts.find(c =>
+                c.id !== contactId &&
+                c.fields.email?.toLowerCase() === updated.fields.email?.toLowerCase()
+            );
+
+            if (emailExists) {
+                throw new Error(`Email-Adresse "${updated.fields.email}" wird bereits verwendet`);
+            }
         }
 
         appState.updateContact(contactId, updates);
