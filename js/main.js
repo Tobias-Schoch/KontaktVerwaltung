@@ -1099,6 +1099,156 @@ class App {
     }
 
     /**
+     * Kontakte importieren (CSV oder vCard)
+     */
+    async importContacts() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv,.vcf,.vcard';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                let contacts = [];
+
+                if (file.name.endsWith('.csv')) {
+                    contacts = this.parseCSV(text);
+                } else if (file.name.endsWith('.vcf') || file.name.endsWith('.vcard')) {
+                    contacts = this.parseVCard(text);
+                }
+
+                if (contacts.length > 0) {
+                    // Kontakte importieren
+                    contacts.forEach(contact => {
+                        contactService.create(contact);
+                    });
+
+                    showToast(`${contacts.length} Kontakte importiert`, 'success');
+                    this.renderView('contacts');
+                    this.updateCounters();
+                } else {
+                    showToast('Keine Kontakte gefunden', 'warning');
+                }
+            } catch (error) {
+                showToast('Fehler beim Importieren: ' + error.message, 'error');
+            }
+        };
+        input.click();
+    }
+
+    /**
+     * CSV parsen (unterstützt mehrere Formate)
+     */
+    parseCSV(text) {
+        const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length < 2) return [];
+
+        const headers = lines[0].split('\t').map(h => h.trim());
+        const contacts = [];
+
+        // Prüfen, ob sowohl Anrede als auch Briefanrede vorhanden sind
+        const hasBriefanrede = headers.includes('Briefanrede');
+        const hasAnrede = headers.includes('Anrede');
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split('\t');
+            const contact = {};
+
+            headers.forEach((header, index) => {
+                const value = values[index]?.trim() || '';
+
+                // Mapping der Spalten (alle Formate)
+                // Format 1 & 2: Nachname/Vorname
+                if (header === 'Nachname' && value) contact.lastName = value;
+                else if (header === 'Vorname' && value) contact.firstName = value;
+
+                // Format 3: Name/Vorname
+                else if (header === 'Name' && value) contact.lastName = value;
+
+                // Adress-Felder
+                else if (header === 'ZustellStrasse' && value) contact.street = value;
+                else if (header === 'ZustellStraße' && value) contact.street = value;
+                else if (header === 'Strasse' && value) contact.street = value;
+                else if (header === 'Straße' && value) contact.street = value;
+                else if (header === 'ZustellPLZ' && value) contact.zip = value;
+                else if (header === 'PLZ' && value) contact.zip = value;
+                else if (header === 'ZustellOrt' && value) contact.city = value;
+                else if (header === 'Ort' && value) contact.city = value;
+
+                // Weitere Felder
+                else if (header === 'Titel' && value) contact.title = value;
+                else if (header === 'E-Mail1' && value) contact.email = value;
+                else if (header === 'Mail' && value) contact.email = value;
+                else if (header === 'Geburtstag' && value) contact.birthday = value;
+                else if (header === 'Telefon' && value) contact.phone = value;
+                else if (header === 'Briefanrede' && value) contact.salutation = value;
+                else if (header === 'Anrede' && value && !hasBriefanrede) {
+                    // Anrede nur als Gender mappen, wenn keine Briefanrede vorhanden
+                    if (value.toLowerCase().includes('herr')) contact.gender = 'male';
+                    else if (value.toLowerCase().includes('frau')) contact.gender = 'female';
+                }
+            });
+
+            // Nur hinzufügen wenn mindestens Name vorhanden
+            if (contact.firstName || contact.lastName) {
+                contacts.push(contact);
+            }
+        }
+
+        return contacts;
+    }
+
+    /**
+     * vCard/Outlook-Kontakt parsen
+     */
+    parseVCard(text) {
+        const contacts = [];
+        const vcards = text.split('BEGIN:VCARD');
+
+        for (let i = 1; i < vcards.length; i++) {
+            const vcard = vcards[i];
+            const contact = {};
+
+            // Name parsen (N:Nachname;Vorname)
+            const nameMatch = vcard.match(/N:([^;]*);([^;\r\n]*)/);
+            if (nameMatch) {
+                contact.lastName = nameMatch[1].trim();
+                contact.firstName = nameMatch[2].trim();
+            }
+
+            // Email parsen
+            const emailMatch = vcard.match(/EMAIL[^:]*:([^\r\n]+)/);
+            if (emailMatch) {
+                contact.email = emailMatch[1].trim();
+            }
+
+            // Telefon parsen
+            const telMatch = vcard.match(/TEL[^:]*:([^\r\n]+)/);
+            if (telMatch) {
+                contact.phone = telMatch[1].trim();
+            }
+
+            // Adresse parsen (ADR:;;Straße;Ort;;PLZ;Land)
+            const adrMatch = vcard.match(/ADR[^:]*:;;([^;]*);([^;]*);[^;]*;([^;]*);([^\r\n]*)/);
+            if (adrMatch) {
+                contact.street = adrMatch[1].trim();
+                contact.city = adrMatch[2].trim();
+                contact.zip = adrMatch[3].trim();
+                contact.country = adrMatch[4].trim();
+            }
+
+            // Nur hinzufügen wenn mindestens Name vorhanden
+            if (contact.firstName || contact.lastName) {
+                contacts.push(contact);
+            }
+        }
+
+        return contacts;
+    }
+
+    /**
      * Empty State
      */
     renderEmptyState(entityName) {

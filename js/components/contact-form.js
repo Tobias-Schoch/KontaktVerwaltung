@@ -111,6 +111,28 @@ export class ContactForm {
                 </div>
 
                 <div class="input-group">
+                    <label class="input-label">Titel</label>
+                    <input
+                        type="text"
+                        class="input"
+                        name="title"
+                        value="${contact?.fields.title || ''}"
+                        placeholder="Dr., Prof., etc."
+                    />
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Briefanrede</label>
+                    <input
+                        type="text"
+                        class="input"
+                        name="salutation"
+                        value="${contact?.fields.salutation || ''}"
+                        placeholder="Sehr geehrter Herr..."
+                    />
+                </div>
+
+                <div class="input-group">
                     <label class="input-label">E-Mail</label>
                     <input
                         type="email"
