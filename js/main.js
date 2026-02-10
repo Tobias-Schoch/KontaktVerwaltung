@@ -8,6 +8,7 @@ import contactService from './services/contact-service.js';
 import groupService from './services/group-service.js';
 import eventService from './services/event-service.js';
 import csvExportService from './services/csv-export-service.js';
+import { Contact } from './models/contact.js';
 import { showToast, debounce, formatDate } from './utils/helpers.js';
 import { generateDemoData } from './utils/demo-data.js';
 import { ContactForm } from './components/contact-form.js';
@@ -1224,6 +1225,140 @@ class App {
     }
 
     /**
+     * Duplikat-Merge-Dialog anzeigen
+     */
+    showDuplicateMergeDialog(existingContact, newContactData, onMerge) {
+        const overlay = document.getElementById('modalOverlay');
+
+        const renderField = (label, existingValue, newValue, fieldName) => {
+            const hasExisting = existingValue && existingValue.trim();
+            const hasNew = newValue && newValue.trim();
+
+            if (!hasExisting && !hasNew) return '';
+
+            return `
+                <div class="merge-field">
+                    <label class="merge-field__label">${label}</label>
+                    <div class="merge-field__options">
+                        <label class="merge-option ${hasExisting ? '' : 'merge-option--empty'}">
+                            <input type="radio" name="${fieldName}" value="existing" ${hasExisting ? 'checked' : ''} ${!hasExisting ? 'disabled' : ''}>
+                            <div class="merge-option__content">
+                                <span class="merge-option__badge">Behalten</span>
+                                <span class="merge-option__value">${hasExisting ? existingValue : '(leer)'}</span>
+                            </div>
+                        </label>
+                        <label class="merge-option ${hasNew ? '' : 'merge-option--empty'}">
+                            <input type="radio" name="${fieldName}" value="new" ${!hasExisting && hasNew ? 'checked' : ''} ${!hasNew ? 'disabled' : ''}>
+                            <div class="merge-option__content">
+                                <span class="merge-option__badge merge-option__badge--new">Neu</span>
+                                <span class="merge-option__value">${hasNew ? newValue : '(leer)'}</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            `;
+        };
+
+        const dialogHTML = `
+            <div class="modal modal--large">
+                <div class="modal__header">
+                    <h2 class="modal__title">Duplikat gefunden: ${existingContact.getFullName()}</h2>
+                    <button class="modal__close" id="closeMergeDialog">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal__body" style="max-height: 70vh; overflow-y: auto;">
+                    <p class="text-sm text-secondary mb-6">Wähle für jedes Feld, welchen Wert du behalten möchtest:</p>
+
+                    <form id="mergeForm">
+                        ${renderField('Vorname', existingContact.fields.firstName, newContactData.fields?.firstName, 'firstName')}
+                        ${renderField('Nachname', existingContact.fields.lastName, newContactData.fields?.lastName, 'lastName')}
+                        ${renderField('Anrede',
+                            existingContact.fields.gender === 'male' ? 'Herr' : existingContact.fields.gender === 'female' ? 'Frau' : existingContact.fields.gender === 'diverse' ? 'Divers' : '',
+                            newContactData.fields?.gender === 'male' ? 'Herr' : newContactData.fields?.gender === 'female' ? 'Frau' : newContactData.fields?.gender === 'diverse' ? 'Divers' : '',
+                            'gender'
+                        )}
+                        ${renderField('Titel', existingContact.fields.title, newContactData.fields?.title, 'title')}
+                        ${renderField('Briefanrede', existingContact.fields.salutation, newContactData.fields?.salutation, 'salutation')}
+                        ${renderField('E-Mail', existingContact.fields.email, newContactData.fields?.email, 'email')}
+                        ${renderField('Telefon', existingContact.fields.phone, newContactData.fields?.phone, 'phone')}
+                        ${renderField('Mobil', existingContact.fields.mobile, newContactData.fields?.mobile, 'mobile')}
+                        ${renderField('Straße', existingContact.fields.address?.street, newContactData.fields?.address?.street, 'street')}
+                        ${renderField('PLZ', existingContact.fields.address?.zip, newContactData.fields?.address?.zip, 'zip')}
+                        ${renderField('Ort', existingContact.fields.address?.city, newContactData.fields?.address?.city, 'city')}
+                        ${renderField('Land', existingContact.fields.address?.country, newContactData.fields?.address?.country, 'country')}
+                        ${renderField('Notizen', existingContact.fields.notes, newContactData.fields?.notes, 'notes')}
+                    </form>
+                </div>
+                <div class="modal__footer">
+                    <button class="btn btn--ghost" id="skipMergeBtn">Überspringen</button>
+                    <button class="btn btn--primary" id="confirmMergeBtn">Zusammenführen</button>
+                </div>
+            </div>
+        `;
+
+        overlay.innerHTML = dialogHTML;
+        overlay.classList.add('active');
+
+        // Event Listeners
+        document.getElementById('closeMergeDialog').addEventListener('click', () => {
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.innerHTML = '', 200);
+            onMerge(null);
+        });
+
+        document.getElementById('skipMergeBtn').addEventListener('click', () => {
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.innerHTML = '', 200);
+            onMerge(null);
+        });
+
+        document.getElementById('confirmMergeBtn').addEventListener('click', () => {
+            const form = document.getElementById('mergeForm');
+            const formData = new FormData(form);
+
+            const mergedData = {
+                fields: {
+                    address: {}
+                }
+            };
+
+            // Gender mapping
+            const genderMap = {
+                'Herr': 'male',
+                'Frau': 'female',
+                'Divers': 'diverse'
+            };
+
+            // Collect selected values
+            for (let [fieldName, choice] of formData.entries()) {
+                const source = choice === 'existing' ? existingContact : newContactData;
+
+                if (fieldName === 'gender') {
+                    const genderValue = choice === 'existing' ? existingContact.fields.gender : newContactData.fields?.gender;
+                    mergedData.fields.gender = genderValue;
+                } else if (['street', 'zip', 'city', 'country'].includes(fieldName)) {
+                    const value = choice === 'existing'
+                        ? existingContact.fields.address?.[fieldName]
+                        : newContactData.fields?.address?.[fieldName];
+                    if (value) mergedData.fields.address[fieldName] = value;
+                } else {
+                    const value = choice === 'existing'
+                        ? existingContact.fields[fieldName]
+                        : newContactData.fields?.[fieldName];
+                    if (value) mergedData.fields[fieldName] = value;
+                }
+            }
+
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.innerHTML = '', 200);
+            onMerge(mergedData);
+        });
+    }
+
+    /**
      * Import durchführen mit Duplikat-Prüfung
      */
     async performImport(contacts, skipGroupDialog = false) {
@@ -1264,18 +1399,63 @@ class App {
                 }
             }
 
-            // Kontakte importieren mit Duplikat-Prüfung
+            // Kontakte importieren mit Duplikat-Prüfung und Merge
             const imported = [];
-            const duplicates = [];
+            const merged = [];
+            const skipped = [];
 
-            contacts.forEach((contactData, index) => {
-                try {
-                    const contact = contactService.create(contactData);
-                    imported.push(contact.id);
-                } catch (error) {
-                    duplicates.push(error.message);
+            for (let i = 0; i < contacts.length; i++) {
+                const contactData = contacts[i];
+
+                // Prüfe auf Duplikate
+                const existingContacts = appState.getContacts();
+                const nameMatch = existingContacts.find(c =>
+                    c.fields.firstName?.toLowerCase() === contactData.fields?.firstName?.toLowerCase() &&
+                    c.fields.lastName?.toLowerCase() === contactData.fields?.lastName?.toLowerCase()
+                );
+
+                const emailMatch = contactData.fields?.email
+                    ? existingContacts.find(c =>
+                        c.fields.email?.toLowerCase() === contactData.fields?.email?.toLowerCase()
+                    )
+                    : null;
+
+                const existingContact = nameMatch || emailMatch;
+
+                if (existingContact) {
+                    // Duplikat gefunden - Merge-Dialog anzeigen
+                    const existingContactObj = contactService.get(existingContact.id);
+                    const mergedData = await new Promise((resolve) => {
+                        this.showDuplicateMergeDialog(
+                            existingContactObj,
+                            contactData,
+                            resolve
+                        );
+                    });
+
+                    if (mergedData) {
+                        // User hat Felder ausgewählt - Kontakt updaten
+                        try {
+                            contactService.update(existingContact.id, mergedData);
+                            merged.push(existingContact.id);
+                            imported.push(existingContact.id);
+                        } catch (error) {
+                            skipped.push(`${contactData.fields?.firstName} ${contactData.fields?.lastName}: ${error.message}`);
+                        }
+                    } else {
+                        // User hat übersprungen
+                        skipped.push(`${contactData.fields?.firstName} ${contactData.fields?.lastName}`);
+                    }
+                } else {
+                    // Kein Duplikat - normal importieren
+                    try {
+                        const contact = contactService.create(contactData);
+                        imported.push(contact.id);
+                    } catch (error) {
+                        skipped.push(`${contactData.fields?.firstName} ${contactData.fields?.lastName}: ${error.message}`);
+                    }
                 }
-            });
+            }
 
             // Kontakte zur Gruppe hinzufügen
             if (groupId && imported.length > 0) {
@@ -1292,16 +1472,30 @@ class App {
             }, 200);
 
             // Ergebnis anzeigen
+            const newImports = imported.length - merged.length;
             if (imported.length > 0) {
                 const groupName = groupId ? groupService.get(groupId).name : '';
-                const message = groupId
-                    ? `${imported.length} Kontakte in "${groupName}" importiert`
-                    : `${imported.length} Kontakte importiert`;
+                let message = '';
+
+                if (newImports > 0 && merged.length > 0) {
+                    message = groupId
+                        ? `${newImports} neue, ${merged.length} aktualisiert in "${groupName}"`
+                        : `${newImports} neue, ${merged.length} aktualisiert`;
+                } else if (merged.length > 0) {
+                    message = groupId
+                        ? `${merged.length} Kontakte aktualisiert in "${groupName}"`
+                        : `${merged.length} Kontakte aktualisiert`;
+                } else {
+                    message = groupId
+                        ? `${newImports} Kontakte in "${groupName}" importiert`
+                        : `${newImports} Kontakte importiert`;
+                }
+
                 showToast(message, 'success');
             }
 
-            if (duplicates.length > 0) {
-                showToast(`${duplicates.length} Duplikate übersprungen`, 'warning');
+            if (skipped.length > 0) {
+                showToast(`${skipped.length} Kontakte übersprungen`, 'warning');
             }
 
             this.renderView('contacts');
