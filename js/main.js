@@ -1303,16 +1303,18 @@ class App {
         overlay.classList.add('active');
 
         // Event Listeners
-        document.getElementById('closeMergeDialog').addEventListener('click', () => {
+        const closeDialog = (mergedData) => {
             overlay.classList.remove('active');
-            setTimeout(() => overlay.innerHTML = '', 200);
-            onMerge(null);
+            overlay.innerHTML = '';
+            onMerge(mergedData);
+        };
+
+        document.getElementById('closeMergeDialog').addEventListener('click', () => {
+            closeDialog(null);
         });
 
         document.getElementById('skipMergeBtn').addEventListener('click', () => {
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.innerHTML = '', 200);
-            onMerge(null);
+            closeDialog(null);
         });
 
         document.getElementById('confirmMergeBtn').addEventListener('click', () => {
@@ -1352,9 +1354,7 @@ class App {
                 }
             }
 
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.innerHTML = '', 200);
-            onMerge(mergedData);
+            closeDialog(mergedData);
         });
     }
 
@@ -1407,22 +1407,31 @@ class App {
             for (let i = 0; i < contacts.length; i++) {
                 const contactData = contacts[i];
 
-                // Prüfe auf Duplikate
+                // Prüfe auf Duplikate - ALLE finden, nicht nur den ersten
                 const existingContacts = appState.getContacts();
-                const nameMatch = existingContacts.find(c =>
+                const nameMatches = existingContacts.filter(c =>
                     c.fields.firstName?.toLowerCase() === contactData.fields?.firstName?.toLowerCase() &&
                     c.fields.lastName?.toLowerCase() === contactData.fields?.lastName?.toLowerCase()
                 );
 
-                const emailMatch = contactData.fields?.email
-                    ? existingContacts.find(c =>
+                const emailMatches = contactData.fields?.email
+                    ? existingContacts.filter(c =>
                         c.fields.email?.toLowerCase() === contactData.fields?.email?.toLowerCase()
                     )
-                    : null;
+                    : [];
 
-                const existingContact = nameMatch || emailMatch;
+                // Alle Duplikate zusammenführen und deduplizieren
+                const allMatches = [...nameMatches, ...emailMatches];
+                const uniqueMatches = [...new Map(allMatches.map(c => [c.id, c])).values()];
 
-                if (existingContact) {
+                if (uniqueMatches.length > 0) {
+                    // Wenn mehrere Duplikate: Zeige Info
+                    if (uniqueMatches.length > 1) {
+                        console.warn(`⚠️ ${uniqueMatches.length} Duplikate gefunden für ${contactData.fields?.firstName} ${contactData.fields?.lastName}`);
+                    }
+
+                    // Merge mit dem ersten/besten Match
+                    const existingContact = uniqueMatches[0];
                     // Duplikat gefunden - Merge-Dialog anzeigen
                     const existingContactObj = contactService.get(existingContact.id);
                     const mergedData = await new Promise((resolve) => {
@@ -1436,14 +1445,30 @@ class App {
                     if (mergedData) {
                         // User hat Felder ausgewählt - Kontakt updaten
                         try {
+                            // Temporär: E-Mail-Duplikat-Check umgehen durch direktes Entfernen der E-Mail bei anderen Duplikaten
+                            if (mergedData.fields?.email && uniqueMatches.length > 1) {
+                                // Entferne E-Mail von allen anderen Duplikaten
+                                uniqueMatches.forEach(match => {
+                                    if (match.id !== existingContact.id &&
+                                        match.fields.email?.toLowerCase() === mergedData.fields?.email?.toLowerCase()) {
+                                        contactService.update(match.id, {
+                                            fields: { email: '' }
+                                        });
+                                        console.log(`🔄 E-Mail von Duplikat ${match.fields.firstName} ${match.fields.lastName} entfernt`);
+                                    }
+                                });
+                            }
+
                             contactService.update(existingContact.id, mergedData);
                             merged.push(existingContact.id);
                             imported.push(existingContact.id);
                         } catch (error) {
+                            console.error('❌ Fehler beim Update:', error);
                             skipped.push(`${contactData.fields?.firstName} ${contactData.fields?.lastName}: ${error.message}`);
                         }
                     } else {
                         // User hat übersprungen
+                        console.log('⏭️ Kontakt übersprungen (mergedData ist null):', contactData.fields?.firstName, contactData.fields?.lastName);
                         skipped.push(`${contactData.fields?.firstName} ${contactData.fields?.lastName}`);
                     }
                 } else {
@@ -1457,11 +1482,15 @@ class App {
                 }
             }
 
-            // Kontakte zur Gruppe hinzufügen
+            // Kontakte zur Gruppe hinzufügen (nur wenn nicht bereits Mitglied)
             if (groupId && imported.length > 0) {
                 const group = groupService.get(groupId);
-                const updatedContactIds = [...new Set([...group.contactIds, ...imported])];
-                groupService.update(groupId, { contactIds: updatedContactIds });
+                imported.forEach(contactId => {
+                    // Nur hinzufügen wenn nicht bereits in der Gruppe
+                    if (!group.contactIds.includes(contactId)) {
+                        contactService.addToGroup(contactId, groupId);
+                    }
+                });
             }
 
             // Dialog schließen
@@ -1478,24 +1507,29 @@ class App {
                 let message = '';
 
                 if (newImports > 0 && merged.length > 0) {
+                    const newText = newImports === 1 ? '1 neuer' : `${newImports} neue`;
+                    const mergedText = merged.length === 1 ? '1 aktualisiert' : `${merged.length} aktualisiert`;
                     message = groupId
-                        ? `${newImports} neue, ${merged.length} aktualisiert in "${groupName}"`
-                        : `${newImports} neue, ${merged.length} aktualisiert`;
+                        ? `${newText}, ${mergedText} in "${groupName}"`
+                        : `${newText}, ${mergedText}`;
                 } else if (merged.length > 0) {
+                    const kontaktText = merged.length === 1 ? 'Kontakt' : 'Kontakte';
                     message = groupId
-                        ? `${merged.length} Kontakte aktualisiert in "${groupName}"`
-                        : `${merged.length} Kontakte aktualisiert`;
+                        ? `${merged.length} ${kontaktText} aktualisiert in "${groupName}"`
+                        : `${merged.length} ${kontaktText} aktualisiert`;
                 } else {
+                    const kontaktText = newImports === 1 ? 'Kontakt' : 'Kontakte';
                     message = groupId
-                        ? `${newImports} Kontakte in "${groupName}" importiert`
-                        : `${newImports} Kontakte importiert`;
+                        ? `${newImports} ${kontaktText} in "${groupName}" importiert`
+                        : `${newImports} ${kontaktText} importiert`;
                 }
 
                 showToast(message, 'success');
             }
 
             if (skipped.length > 0) {
-                showToast(`${skipped.length} Kontakte übersprungen`, 'warning');
+                const kontaktText = skipped.length === 1 ? 'Kontakt' : 'Kontakte';
+                showToast(`${skipped.length} ${kontaktText} übersprungen`, 'warning');
             }
 
             this.renderView('contacts');
