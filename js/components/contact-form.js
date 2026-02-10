@@ -531,25 +531,25 @@ export class ContactForm {
             cityInput.style.opacity = '0.5';
             cityInput.placeholder = 'Suche...';
 
-            // API-Call zur Zippopotam.us API (kostenlos, kein API-Key nötig)
-            const response = await fetch(`https://api.zippopotam.us/de/${zip}`);
+            // GeoNames API - zuverlässige Städtenamen
+            const response = await fetch(
+                `http://api.geonames.org/postalCodeSearchJSON?postalcode=${zip}&country=DE&username=tobiasschoch&maxRows=1`
+            );
 
             if (response.ok) {
                 const data = await response.json();
 
-                if (data.places && data.places.length > 0) {
-                    const place = data.places[0];
+                if (data.postalCodes && data.postalCodes.length > 0) {
+                    const place = data.postalCodes[0];
 
-                    // Stadt ausfüllen (nur wenn Feld leer ist)
+                    // Stadt ausfüllen
                     if (!cityInput.value) {
-                        cityInput.value = place['place name'];
+                        cityInput.value = place.placeName;
                     }
 
-                    // Land ausfüllen (nur wenn Feld leer ist)
-                    if (!countryInput.value && data.country) {
-                        // Land übersetzen (API gibt englische Namen zurück)
-                        const countryName = data.country === 'Germany' ? 'Deutschland' : data.country;
-                        countryInput.value = countryName;
+                    // Land ausfüllen
+                    if (!countryInput.value) {
+                        countryInput.value = 'Deutschland';
                     }
 
                     // Visual Feedback: Erfolg

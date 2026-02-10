@@ -40,7 +40,7 @@
     flex-shrink: 0;
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    background: var(--color-primary);
     border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;

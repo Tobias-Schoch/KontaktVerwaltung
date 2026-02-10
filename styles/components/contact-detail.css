@@ -55,7 +55,7 @@
     width: 80px;
     height: 80px;
     border-radius: var(--radius-full);
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    background: var(--color-primary);
     display: flex;
     align-items: center;
     justify-content: center;

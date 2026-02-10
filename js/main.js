@@ -1202,7 +1202,7 @@ class App {
     }
 
     /**
-     * PLZ zu Ort auflösen (für Import)
+     * PLZ zu Ort auflösen (für Import) - GeoNames API
      */
     async lookupCityFromZip(zip) {
         try {
@@ -1210,12 +1210,14 @@ class App {
                 return null;
             }
 
-            const response = await fetch(`https://api.zippopotam.us/de/${zip}`);
+            const response = await fetch(
+                `http://api.geonames.org/postalCodeSearchJSON?postalcode=${zip}&country=DE&username=tobiasschoch&maxRows=1`
+            );
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.places && data.places.length > 0) {
-                    return data.places[0]['place name'];
+                if (data.postalCodes && data.postalCodes.length > 0) {
+                    return data.postalCodes[0].placeName;
                 }
             }
             return null;
