@@ -1120,7 +1120,6 @@ class App {
                 }
 
                 if (contacts.length > 0) {
-                    // Gruppen-Auswahl-Dialog anzeigen
                     this.showGroupSelectionDialog(contacts);
                 } else {
                     showToast('Keine Kontakte gefunden', 'warning');
@@ -1140,53 +1139,55 @@ class App {
         const overlay = document.getElementById('modalOverlay');
 
         const dialogHTML = `
-            <div class="modal modal--active">
-                <div class="modal__content" style="max-width: 500px;">
-                    <div class="modal__header">
-                        <h2 class="modal__title">Kontakte einer Gruppe zuweisen</h2>
-                        <button class="icon-button" id="closeGroupDialog">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal__body">
-                        <p class="text-sm text-secondary mb-4">${contacts.length} Kontakte importieren</p>
+            <div class="modal">
+                <div class="modal__header">
+                    <h2 class="modal__title">Kontakte einer Gruppe zuweisen</h2>
+                    <button class="modal__close" id="closeGroupDialog">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal__body">
+                    <p class="text-sm text-secondary mb-4">${contacts.length} Kontakte importieren</p>
 
-                        <div class="input-group">
-                            <label class="input-label">Gruppe auswählen oder erstellen</label>
-                            <select class="input" id="groupSelect">
-                                <option value="">Keine Gruppe (nur importieren)</option>
-                                <option value="__new__">+ Neue Gruppe erstellen</option>
-                                ${groups.map(g => `<option value="${g.id}">${g.name} (${g.contactIds.length})</option>`).join('')}
-                            </select>
-                        </div>
+                    <div class="input-group">
+                        <label class="input-label">Gruppe auswählen oder erstellen</label>
+                        <select class="input select-fancy" id="groupSelect">
+                            <option value="">Keine Gruppe (nur importieren)</option>
+                            <option value="__new__">+ Neue Gruppe erstellen</option>
+                            ${groups.map(g => `<option value="${g.id}">${g.name} (${g.contactIds.length})</option>`).join('')}
+                        </select>
+                    </div>
 
-                        <div class="input-group" id="newGroupNameContainer" style="display: none;">
-                            <label class="input-label">Name der neuen Gruppe</label>
-                            <input type="text" class="input" id="newGroupName" placeholder="z.B. Importierte Kontakte">
-                        </div>
+                    <div class="input-group" id="newGroupNameContainer" style="display: none;">
+                        <label class="input-label">Name der neuen Gruppe</label>
+                        <input type="text" class="input" id="newGroupName" placeholder="z.B. Importierte Kontakte">
                     </div>
-                    <div class="modal__footer">
-                        <button class="btn btn--secondary" id="cancelImportBtn">Abbrechen</button>
-                        <button class="btn btn--primary" id="confirmImportBtn">Importieren</button>
-                    </div>
+                </div>
+                <div class="modal__footer">
+                    <button class="btn btn--ghost" id="cancelImportBtn">Abbrechen</button>
+                    <button class="btn btn--primary" id="confirmImportBtn">Importieren</button>
                 </div>
             </div>
         `;
 
         overlay.innerHTML = dialogHTML;
-        overlay.classList.add('modal-overlay--active');
+        overlay.classList.add('active');
 
         // Event Listeners
         document.getElementById('closeGroupDialog').addEventListener('click', () => {
-            overlay.classList.remove('modal-overlay--active');
-            overlay.innerHTML = '';
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.innerHTML = '';
+            }, 200);
         });
 
         document.getElementById('cancelImportBtn').addEventListener('click', () => {
-            overlay.classList.remove('modal-overlay--active');
-            overlay.innerHTML = '';
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.innerHTML = '';
+            }, 200);
         });
 
         document.getElementById('groupSelect').addEventListener('change', (e) => {
@@ -1194,38 +1195,80 @@ class App {
             container.style.display = e.target.value === '__new__' ? 'block' : 'none';
         });
 
-        document.getElementById('confirmImportBtn').addEventListener('click', () => {
-            this.performImport(contacts);
+        document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+            await this.performImport(contacts);
         });
+    }
+
+    /**
+     * PLZ zu Ort auflösen (für Import)
+     */
+    async lookupCityFromZip(zip) {
+        try {
+            if (!zip || zip.length !== 5 || !/^\d{5}$/.test(zip)) {
+                return null;
+            }
+
+            const response = await fetch(`https://api.zippopotam.us/de/${zip}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.places && data.places.length > 0) {
+                    return data.places[0]['place name'];
+                }
+            }
+            return null;
+        } catch (error) {
+            return null;
+        }
     }
 
     /**
      * Import durchführen mit Duplikat-Prüfung
      */
-    performImport(contacts) {
-        const groupSelect = document.getElementById('groupSelect').value;
-        const newGroupName = document.getElementById('newGroupName')?.value;
-
+    async performImport(contacts, skipGroupDialog = false) {
         let groupId = null;
 
-        try {
-            // Neue Gruppe erstellen, falls gewünscht
-            if (groupSelect === '__new__') {
-                if (!newGroupName || !newGroupName.trim()) {
-                    showToast('Bitte Gruppennamen eingeben', 'error');
-                    return;
+        if (!skipGroupDialog) {
+            const groupSelect = document.getElementById('groupSelect')?.value;
+            const newGroupName = document.getElementById('newGroupName')?.value;
+
+            try {
+                // Neue Gruppe erstellen, falls gewünscht
+                if (groupSelect === '__new__') {
+                    if (!newGroupName || !newGroupName.trim()) {
+                        showToast('Bitte Gruppennamen eingeben', 'error');
+                        return;
+                    }
+                    const newGroup = groupService.create({ name: newGroupName.trim() });
+                    groupId = newGroup.id;
+                } else if (groupSelect) {
+                    groupId = groupSelect;
                 }
-                const newGroup = groupService.create({ name: newGroupName.trim() });
-                groupId = newGroup.id;
-            } else if (groupSelect) {
-                groupId = groupSelect;
+            } catch (error) {
+                showToast('Fehler bei Gruppenwahl: ' + error.message, 'error');
+                return;
+            }
+        }
+
+        try {
+            // PLZ zu Ort auflösen für alle Kontakte
+            for (let i = 0; i < contacts.length; i++) {
+                const contact = contacts[i];
+                const zip = contact.fields?.address?.zip;
+                if (zip) {
+                    const city = await this.lookupCityFromZip(zip);
+                    if (city) {
+                        contact.fields.address.city = city;
+                    }
+                }
             }
 
             // Kontakte importieren mit Duplikat-Prüfung
             const imported = [];
             const duplicates = [];
 
-            contacts.forEach(contactData => {
+            contacts.forEach((contactData, index) => {
                 try {
                     const contact = contactService.create(contactData);
                     imported.push(contact.id);
@@ -1243,8 +1286,10 @@ class App {
 
             // Dialog schließen
             const overlay = document.getElementById('modalOverlay');
-            overlay.classList.remove('modal-overlay--active');
-            overlay.innerHTML = '';
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.innerHTML = '';
+            }, 200);
 
             // Ergebnis anzeigen
             if (imported.length > 0) {
@@ -1278,10 +1323,18 @@ class App {
         const firstLine = lines[0];
         let headers, allValues;
 
-        if (firstLine.includes('\t')) {
+        if (firstLine.includes(';')) {
+            // Semikolon-getrennt (Standard deutsches CSV)
+            headers = firstLine.split(';').map(h => h.trim());
+            allValues = lines.slice(1).map(line => line.split(';').map(v => v.trim()));
+        } else if (firstLine.includes('\t')) {
             // Tab-getrennt
             headers = firstLine.split('\t').map(h => h.trim());
             allValues = lines.slice(1).map(line => line.split('\t').map(v => v.trim()));
+        } else if (firstLine.includes(',')) {
+            // Komma-getrennt
+            headers = firstLine.split(',').map(h => h.trim());
+            allValues = lines.slice(1).map(line => line.split(',').map(v => v.trim()));
         } else {
             // Mehrere Leerzeichen als Trenner
             headers = firstLine.split(/\s{2,}/).map(h => h.trim());
@@ -1296,7 +1349,11 @@ class App {
 
         for (let i = 0; i < allValues.length; i++) {
             const values = allValues[i];
-            const contact = {};
+            const contact = {
+                fields: {
+                    address: {}
+                }
+            };
 
             headers.forEach((header, index) => {
                 const value = values[index]?.trim() || '';
@@ -1306,38 +1363,55 @@ class App {
 
                 // Mapping der Spalten (alle Formate)
                 // Format 1 & 2: Nachname/Vorname
-                if (header === 'Nachname' && value) contact.lastName = value;
-                else if (header === 'Vorname' && value) contact.firstName = value;
+                if (header === 'Nachname' && value) contact.fields.lastName = value;
+                else if (header === 'Vorname' && value) contact.fields.firstName = value;
 
                 // Format 3: Name/Vorname
-                else if (header === 'Name' && value) contact.lastName = value;
+                else if (header === 'Name' && value) contact.fields.lastName = value;
 
                 // Adress-Felder
-                else if (header === 'ZustellStrasse' && value) contact.street = value;
-                else if (header === 'ZustellStraße' && value) contact.street = value;
-                else if (header === 'Strasse' && value) contact.street = value;
-                else if (header === 'Straße' && value) contact.street = value;
-                else if (header === 'ZustellPLZ' && value) contact.zip = value;
-                else if (header === 'PLZ' && value) contact.zip = value;
-                else if (header === 'ZustellOrt' && value) contact.city = value;
-                else if (header === 'Ort' && value) contact.city = value;
+                else if (header === 'ZustellStrasse' && value) contact.fields.address.street = value;
+                else if (header === 'ZustellStraße' && value) contact.fields.address.street = value;
+                else if (header === 'Strasse' && value) contact.fields.address.street = value;
+                else if (header === 'Straße' && value) contact.fields.address.street = value;
+                else if (header === 'ZustellPLZ' && value) contact.fields.address.zip = value;
+                else if (header === 'PLZ' && value) contact.fields.address.zip = value;
+                else if (header === 'ZustellOrt' && value) contact.fields.address.city = value;
+                else if (header === 'Ort' && value) contact.fields.address.city = value;
 
                 // Weitere Felder
-                else if (header === 'Titel' && value) contact.title = value;
-                else if (header === 'E-Mail1' && value) contact.email = value;
-                else if (header === 'Mail' && value) contact.email = value;
-                else if (header === 'Geburtstag' && value) contact.birthday = value;
-                else if (header === 'Telefon' && value) contact.phone = value;
-                else if (header === 'Briefanrede' && value) contact.salutation = value;
+                else if (header === 'Titel' && value) contact.fields.title = value;
+                else if (header === 'E-Mail1' && value) contact.fields.email = value;
+                else if (header === 'Mail' && value) contact.fields.email = value;
+                else if (header === 'Geburtstag' && value) contact.fields.birthday = value;
+                else if (header === 'Telefon' && value) contact.fields.phone = value;
+                else if (header === 'Briefanrede' && value) {
+                    contact.fields.salutation = value;
+                    // Gender aus Briefanrede extrahieren
+                    const lowerValue = value.toLowerCase();
+                    if (lowerValue.includes('herr')) {
+                        contact.fields.gender = 'male';
+                    } else if (lowerValue.includes('frau')) {
+                        contact.fields.gender = 'female';
+                    } else {
+                        contact.fields.gender = 'diverse';
+                    }
+                }
                 else if (header === 'Anrede' && value && !hasBriefanrede) {
                     // Anrede nur als Gender mappen, wenn keine Briefanrede vorhanden
-                    if (value.toLowerCase().includes('herr')) contact.gender = 'male';
-                    else if (value.toLowerCase().includes('frau')) contact.gender = 'female';
+                    const lowerValue = value.toLowerCase();
+                    if (lowerValue.includes('herr')) {
+                        contact.fields.gender = 'male';
+                    } else if (lowerValue.includes('frau')) {
+                        contact.fields.gender = 'female';
+                    } else {
+                        contact.fields.gender = 'diverse';
+                    }
                 }
             });
 
             // Nur hinzufügen wenn mindestens Name vorhanden
-            if (contact.firstName || contact.lastName) {
+            if (contact.fields.firstName || contact.fields.lastName) {
                 contacts.push(contact);
             }
         }
