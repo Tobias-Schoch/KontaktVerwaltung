@@ -1,0 +1,88 @@
+/* Responsive Layout */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-width: 200px;
+    }
+
+    .topbar {
+        padding: 0 var(--space-4);
+    }
+
+    .topbar__center {
+        margin: 0 var(--space-4);
+    }
+
+    .logo__text {
+        display: none;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    :root {
+        --topbar-height: 56px;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: -100%;
+        top: var(--topbar-height);
+        bottom: 0;
+        width: 280px;
+        z-index: 200;
+        transition: left var(--duration-base) var(--ease-out);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .sidebar.active {
+        left: 0;
+    }
+
+    .main-container {
+        flex-direction: column;
+    }
+
+    .topbar {
+        padding: 0 var(--space-4);
+    }
+
+    .topbar__center {
+        margin: 0 var(--space-2);
+    }
+
+    .search-bar {
+        padding: var(--space-2) var(--space-3);
+    }
+
+    .fab {
+        bottom: var(--space-4);
+        right: var(--space-4);
+    }
+
+    .toast {
+        min-width: 280px;
+        max-width: calc(100vw - var(--space-8));
+    }
+
+    .modal {
+        width: 95%;
+        max-height: 95vh;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+    .topbar__right {
+        gap: var(--space-2);
+    }
+
+    .storage-indicator__text {
+        display: none;
+    }
+
+    .nav-item__badge {
+        display: none;
+    }
+}

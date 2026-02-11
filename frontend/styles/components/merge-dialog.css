@@ -1,0 +1,176 @@
+/**
+ * Merge Dialog Styles - Duplikat-Zusammenführung
+ */
+
+.modal--large {
+    max-width: 900px !important;
+    width: 90vw !important;
+}
+
+.merge-field {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.merge-field:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.merge-field__label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.merge-field__options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.merge-option {
+    position: relative;
+    display: block;
+    padding: 16px;
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--color-background);
+}
+
+.merge-option:hover:not(.merge-option--empty) {
+    border-color: var(--color-primary);
+    background: var(--color-surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.merge-option input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Checked state - both :has() and fallback */
+.merge-option:has(input[type="radio"]:checked),
+.merge-option input[type="radio"]:checked + .merge-option__content,
+.merge-option input[type="radio"]:checked ~ .merge-option__content {
+    border-color: var(--color-primary);
+}
+
+.merge-option:has(input[type="radio"]:checked) {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary-soft) !important;
+    box-shadow: 0 0 0 3px var(--color-primary-soft) !important;
+}
+
+.merge-option:has(input[type="radio"]:checked) .merge-option__content {
+    opacity: 1 !important;
+}
+
+.merge-option:has(input[type="radio"]:checked) .merge-option__badge {
+    background: var(--color-primary) !important;
+    color: white !important;
+    font-weight: 700 !important;
+}
+
+.merge-option--empty {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: var(--color-background);
+    pointer-events: none;
+}
+
+.merge-option--empty:hover {
+    border-color: var(--color-border);
+    background: var(--color-background);
+    box-shadow: none;
+    transform: none;
+}
+
+.merge-option__content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+}
+
+.merge-option__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 6px;
+    background: var(--color-border);
+    color: var(--color-text-tertiary);
+    width: fit-content;
+    transition: all 0.2s ease;
+}
+
+.merge-option__badge--new {
+    background: rgba(16, 185, 129, 0.15);
+    color: rgb(16, 185, 129);
+}
+
+.merge-option__value {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    word-break: break-word;
+    line-height: 1.6;
+    margin-top: 2px;
+}
+
+.merge-option--empty .merge-option__value {
+    color: var(--color-text-tertiary);
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* Dark Mode Anpassungen */
+[data-theme="dark"] .merge-option {
+    background: var(--color-surface);
+}
+
+[data-theme="dark"] .merge-option:hover:not(.merge-option--empty) {
+    background: var(--color-surface-hover);
+}
+
+[data-theme="dark"] .merge-option:has(input[type="radio"]:checked) {
+    background: rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .modal--large {
+        max-width: 95vw !important;
+    }
+
+    .merge-field__options {
+        grid-template-columns: 1fr;
+    }
+
+    .merge-option {
+        padding: 12px;
+    }
+}

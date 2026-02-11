@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+PHASE*.md
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (will be installed in container)
+node_modules
+
+# Local development
+*.log
+*.local
+
+# Test files
+test-*.html
